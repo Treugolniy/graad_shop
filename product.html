@@ -3,413 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>GRAAD | Товар</title>
+    <title>GRΛD | Товар</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Шрифт Bebas Neue Cyrillic -->
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        body {
-            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', -apple-system, sans-serif;
-            background: #000000;
-            color: #E6E6E6;
-            min-height: 100vh;
-        }
-
-        /* ========== ХЕДЕР СО СТЕКЛОМ ========== */
-        .glass-header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 16px 20px;
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(15px);
-            -webkit-backdrop-filter: blur(15px);
-            z-index: 100;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .back-btn img {
-            width: 24px;
-            height: 24px;
-            filter: brightness(0) invert(1);
-        }
-
-        .back-btn:active {
-            opacity: 0.7;
-        }
-
-        .logo-icon {
-            height: 28px;
-            width: auto;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-
-        .logo-icon:active {
-            opacity: 0.7;
-        }
-
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .icon-btn {
-            background: none;
-            border: none;
-            padding: 0;
-            cursor: pointer;
-            position: relative;
-        }
-
-        .icon-btn img {
-            width: 24px;
-            height: 24px;
-            filter: brightness(0) invert(1);
-        }
-
-        .icon-btn:active {
-            opacity: 0.7;
-        }
-
-        .cart-count {
-            position: absolute;
-            top: -8px;
-            right: -12px;
-            background: #8A1538;
-            color: #E6E6E6;
-            font-size: 11px;
-            font-weight: bold;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 5px;
-            font-family: monospace;
-        }
-
-        /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
-        .product-page {
-            padding-top: 80px;
-            padding-bottom: 100px;
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        /* ========== ГАЛЕРЕЯ ========== */
-        .product-gallery {
-            padding: 0 16px;
-            margin-bottom: 24px;
-        }
-
-        .main-image {
-            width: 100%;
-            aspect-ratio: 1;
-            border-radius: 24px;
-            overflow: hidden;
-            background: rgba(255, 255, 255, 0.05);
-            margin-bottom: 16px;
-        }
-
-        .main-image img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .thumbnail-list {
-            display: flex;
-            gap: 12px;
-            overflow-x: auto;
-            padding-bottom: 8px;
-            scrollbar-width: thin;
-        }
-
-        .thumbnail-list::-webkit-scrollbar {
-            height: 3px;
-        }
-
-        .thumbnail-list::-webkit-scrollbar-track {
-            background: rgba(230, 230, 230, 0.1);
-            border-radius: 10px;
-        }
-
-        .thumbnail-list::-webkit-scrollbar-thumb {
-            background: #8A1538;
-            border-radius: 10px;
-        }
-
-        .thumbnail {
-            width: 80px;
-            height: 80px;
-            border-radius: 16px;
-            overflow: hidden;
-            cursor: pointer;
-            opacity: 0.5;
-            transition: all 0.2s ease;
-            flex-shrink: 0;
-            border: 2px solid transparent;
-        }
-
-        .thumbnail.active {
-            opacity: 1;
-            border-color: #8A1538;
-        }
-
-        .thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-
-        .thumbnail:active {
-            transform: scale(0.95);
-        }
-
-        /* ========== ИНФОРМАЦИЯ О ТОВАРЕ ========== */
-        .product-details {
-            padding: 0 20px;
-        }
-
-        .product-title {
-            font-size: 36px;
-            font-weight: 400;
-            letter-spacing: 1px;
-            margin-bottom: 8px;
-            color: #E6E6E6;
-        }
-
-        .product-price-large {
-            font-size: 32px;
-            font-weight: 400;
-            color: #8A1538;
-            margin-bottom: 24px;
-        }
-
-        .product-description {
-            margin-bottom: 24px;
-        }
-
-        .product-description h3 {
-            font-size: 18px;
-            font-weight: 400;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-            color: rgba(230, 230, 230, 0.8);
-        }
-
-        .product-description p {
-            font-size: 16px;
-            line-height: 1.5;
-            color: rgba(230, 230, 230, 0.7);
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-
-        /* ========== ВЫБОР РАЗМЕРА ========== */
-        .size-selector {
-            margin-bottom: 24px;
-        }
-
-        .size-selector h3 {
-            font-size: 18px;
-            font-weight: 400;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: rgba(230, 230, 230, 0.8);
-        }
-
-        .size-buttons {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .size-btn {
-            min-width: 56px;
-            padding: 10px 0;
-            border-radius: 60px;
-            background: rgba(230, 230, 230, 0.1);
-            border: none;
-            font-size: 16px;
-            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            color: #E6E6E6;
-            transition: all 0.2s ease;
-            text-align: center;
-        }
-
-        .size-btn.active {
-            background: #8A1538;
-            color: #E6E6E6;
-        }
-
-        .size-btn:active {
-            transform: scale(0.96);
-        }
-
-        /* ========== ВЫБОР КОЛИЧЕСТВА ========== */
-        .quantity-selector {
-            margin-bottom: 32px;
-        }
-
-        .quantity-selector h3 {
-            font-size: 18px;
-            font-weight: 400;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-            color: rgba(230, 230, 230, 0.8);
-        }
-
-        .quantity-controls {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-
-        .qty-btn {
-            width: 44px;
-            height: 44px;
-            border-radius: 44px;
-            background: rgba(230, 230, 230, 0.1);
-            border: none;
-            font-size: 24px;
-            font-weight: 400;
-            cursor: pointer;
-            color: #E6E6E6;
-            transition: all 0.2s ease;
-        }
-
-        .qty-btn:active {
-            transform: scale(0.96);
-            background: rgba(230, 230, 230, 0.2);
-        }
-
-        .quantity {
-            font-size: 24px;
-            font-weight: 400;
-            min-width: 40px;
-            text-align: center;
-            color: #E6E6E6;
-        }
-
-        /* ========== КНОПКА В КОРЗИНУ ========== */
-        .btn-add-to-cart {
-            width: 100%;
-            padding: 16px;
-            background: #8A1538;
-            color: #E6E6E6;
-            border: none;
-            border-radius: 60px;
-            font-size: 20px;
-            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
-            letter-spacing: 1px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 8px;
-        }
-
-        .btn-add-to-cart:active {
-            transform: scale(0.97);
-            background: #6d0f2c;
-        }
-
-        /* ========== АДАПТАЦИЯ ========== */
-        @media (max-width: 480px) {
-            .glass-header {
-                padding: 12px 16px;
-            }
-            
-            .logo-icon {
-                height: 24px;
-            }
-            
-            .back-btn img,
-            .icon-btn img {
-                width: 22px;
-                height: 22px;
-            }
-            
-            .product-page {
-                padding-top: 70px;
-                padding-bottom: 80px;
-            }
-            
-            .product-title {
-                font-size: 28px;
-            }
-            
-            .product-price-large {
-                font-size: 26px;
-            }
-            
-            .thumbnail {
-                width: 65px;
-                height: 65px;
-                border-radius: 12px;
-            }
-            
-            .product-details {
-                padding: 0 16px;
-            }
-            
-            .btn-add-to-cart {
-                padding: 14px;
-                font-size: 18px;
-            }
-        }
-
-        @media (max-width: 380px) {
-            .size-btn {
-                min-width: 48px;
-                padding: 8px 0;
-                font-size: 14px;
-            }
-            
-            .qty-btn {
-                width: 38px;
-                height: 38px;
-                font-size: 20px;
-            }
-            
-            .quantity {
-                font-size: 20px;
-            }
-        }
-    </style>
 </head>
 <body>
-    <!-- Хедер со стеклом -->
     <header class="glass-header">
         <div class="header-left">
             <button class="back-btn" onclick="history.back()">
@@ -433,8 +31,22 @@
     </div>
 
     <script src="data.js"></script>
+    <script src="script.js"></script>
     <script>
-        // ========== ФУНКЦИИ КОРЗИНЫ ==========
+        // Получаем ID товара из URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = parseInt(urlParams.get('id'));
+        const product = products.find(p => p.id === productId);
+        
+        if (!product) {
+            window.location.href = 'catalog.html';
+        }
+        
+        let currentImageIndex = 0;
+        let selectedSize = product.sizes[0];
+        let quantity = 1;
+        
+        // Функции корзины (если не определены в script.js)
         function getCart() {
             const cart = localStorage.getItem('cart');
             return cart ? JSON.parse(cart) : [];
@@ -482,20 +94,42 @@
             updateCartCounter();
         }
         
-        // ========== ПОЛУЧАЕМ ТОВАР ==========
-        const urlParams = new URLSearchParams(window.location.search);
-        const productId = parseInt(urlParams.get('id'));
-        const product = products.find(p => p.id === productId);
-        
-        if (!product) {
-            window.location.href = 'catalog.html';
+        function showAddedFeedback() {
+            const feedback = document.createElement('div');
+            feedback.textContent = '✓ Товар добавлен в корзину';
+            feedback.style.cssText = `
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #8A1538;
+                color: #E6E6E6;
+                padding: 10px 24px;
+                border-radius: 60px;
+                font-size: 14px;
+                font-family: 'Bebas Neue Cyrillic', sans-serif;
+                z-index: 200;
+                animation: fadeOut 1.5s ease forwards;
+            `;
+            
+            if (!document.querySelector('#feedbackStyle')) {
+                const style = document.createElement('style');
+                style.id = 'feedbackStyle';
+                style.textContent = `
+                    @keyframes fadeOut {
+                        0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                        70% { opacity: 1; }
+                        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 1500);
         }
         
-        let currentImageIndex = 0;
-        let selectedSize = product.sizes[0];
-        let quantity = 1;
-        
-        // ========== РЕНДЕР СТРАНИЦЫ ==========
+        // Рендер страницы товара
         function renderProduct() {
             const container = document.getElementById('product-page');
             
@@ -550,8 +184,8 @@
             `;
         }
         
-        // ========== ФУНКЦИИ ВЗАИМОДЕЙСТВИЯ ==========
-        function changeImage(index) {
+        // Функции взаимодействия
+        window.changeImage = function(index) {
             currentImageIndex = index;
             document.getElementById('mainImage').src = product.images[index];
             
@@ -559,22 +193,22 @@
             thumbnails.forEach((thumb, i) => {
                 thumb.classList.toggle('active', i === index);
             });
-        }
+        };
         
-        function selectSize(size) {
+        window.selectSize = function(size) {
             selectedSize = size;
             const sizeBtns = document.querySelectorAll('.size-btn');
             sizeBtns.forEach(btn => {
                 btn.classList.toggle('active', btn.textContent === size);
             });
-        }
+        };
         
-        function changeQuantity(delta) {
+        window.changeQuantity = function(delta) {
             quantity = Math.max(1, quantity + delta);
             document.getElementById('quantity').textContent = quantity;
-        }
+        };
         
-        function addToCartHandler() {
+        window.addToCartHandler = function() {
             addToCartGlobal(product.id, selectedSize, quantity);
             
             // Визуальная обратная связь
@@ -588,51 +222,15 @@
                 btn.style.background = '#8A1538';
             }, 1500);
             
-            // Показываем уведомление
             showAddedFeedback();
             
             // Вибрация
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
             }
-        }
+        };
         
-        function showAddedFeedback() {
-            const feedback = document.createElement('div');
-            feedback.textContent = '✓ Товар добавлен в корзину';
-            feedback.style.cssText = `
-                position: fixed;
-                bottom: 100px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: #8A1538;
-                color: #E6E6E6;
-                padding: 10px 24px;
-                border-radius: 60px;
-                font-size: 14px;
-                font-family: 'Bebas Neue Cyrillic', sans-serif;
-                z-index: 200;
-                animation: fadeOut 1.5s ease forwards;
-            `;
-            
-            if (!document.querySelector('#feedbackStyle')) {
-                const style = document.createElement('style');
-                style.id = 'feedbackStyle';
-                style.textContent = `
-                    @keyframes fadeOut {
-                        0% { opacity: 1; transform: translateX(-50%) translateY(0); }
-                        70% { opacity: 1; }
-                        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
-                    }
-                `;
-                document.head.appendChild(style);
-            }
-            
-            document.body.appendChild(feedback);
-            setTimeout(() => feedback.remove(), 1500);
-        }
-        
-        // ========== TELEGRAM INIT ==========
+        // Telegram инициализация
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
@@ -647,7 +245,7 @@
             }
         }
         
-        // ========== ОБРАБОТЧИКИ КНОПОК ==========
+        // Обработчики кнопок
         document.getElementById('cartBtn')?.addEventListener('click', () => {
             window.location.href = 'cart.html';
         });
@@ -662,20 +260,14 @@
             }
         });
         
-        // КЛИК ПО ЛОГОТИПУ — ВОЗВРАТ НА ГЛАВНУЮ
+        // Клик по логотипу — возврат на главную
         document.getElementById('logoBtn')?.addEventListener('click', () => {
             window.location.href = 'index.html';
         });
         
-        // ========== ЗАПУСК ==========
+        // Запуск
         renderProduct();
         updateCartCounter();
-        
-        // Делаем функции глобальными для onclick
-        window.changeImage = changeImage;
-        window.selectSize = selectSize;
-        window.changeQuantity = changeQuantity;
-        window.addToCartHandler = addToCartHandler;
         
         console.log('✅ Карточка товара загружена');
     </script>
