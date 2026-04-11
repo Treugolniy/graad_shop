@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Мой магазин</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Шапка с корзиной -->
+    <div class="header">
+        <div class="logo">🛍️ Мой магазин</div>
+        <a href="cart.html" class="cart-icon">
+            🛒
+            <span class="cart-count" style="display: none;">0</span>
+        </a>
+    </div>
+
+    <!-- Главный экран с фоновыми фото -->
+    <div class="hero">
+        <div class="background-slider">
+            <div class="slide active" style="background-image: url('https://placehold.co/1920x1080/1a1a2e/white?text=Слайд+1')"></div>
+            <div class="slide" style="background-image: url('https://placehold.co/1920x1080/16213e/white?text=Слайд+2')"></div>
+            <div class="slide" style="background-image: url('https://placehold.co/1920x1080/0f3460/white?text=Слайд+3')"></div>
+        </div>
+        
+        <div class="hero-content">
+            <h1 class="hero-title">Стиль, который<br>выбираешь ты</h1>
+            <p class="hero-subtitle">Одежда и аксессуары для тех, кто ценит качество</p>
+            
+            <div class="hero-buttons">
+                <a href="catalog.html" class="btn btn-primary">📱 Каталог</a>
+                <a href="https://t.me/your_channel" target="_blank" class="btn btn-secondary">📢 Telegram-канал</a>
+            </div>
+        </div>
+        
+        <!-- Индикаторы слайдов -->
+        <div class="slider-dots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Логика слайдера на главной
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const dots = document.querySelectorAll('.dot');
+        
+        function showSlide(index) {
+            slides.forEach(slide => slide.classList.remove('active'));
+            dots.forEach(dot => dot.classList.remove('active'));
+            
+            slides[index].classList.add('active');
+            dots[index].classList.add('active');
+            currentSlide = index;
+        }
+        
+        function nextSlide() {
+            let next = (currentSlide + 1) % slides.length;
+            showSlide(next);
+        }
+        
+        // Автоматическое перелистывание каждые 5 секунд
+        setInterval(nextSlide, 5000);
+        
+        // Клик по точкам
+        dots.forEach((dot, index) => {
+            dot.addEventListener('click', () => showSlide(index));
+        });
+        
+        updateCartCounter();
+    </script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Корзина</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="history.back()">←</button>
+        <div class="logo">🛍️ Корзина</div>
+        <div style="width: 40px;"></div>
+    </div>
+
+    <div class="cart-container">
+        <div id="cart-items" class="cart-items">
+            <!-- Товары в корзине -->
+        </div>
+        
+        <div id="empty-cart" class="empty-cart" style="display: none;">
+            <div class="empty-cart-icon">🛒</div>
+            <h3>Корзина пуста</h3>
+            <p>Добавьте товары из каталога</p>
+            <a href="catalog.html" class="btn btn-primary">Перейти в каталог</a>
+        </div>
+        
+        <div id="cart-summary" class="cart-summary" style="display: none;">
+            <div class="summary-row">
+                <span>Товаров:</span>
+                <span id="total-items">0</span>
+            </div>
+            <div class="summary-row total">
+                <span>Итого:</span>
+                <span id="total-price">0 ₽</span>
+            </div>
+            <button class="btn-checkout" id="checkout-btn">
+                💳 Оформить заказ
+            </button>
+            <p class="checkout-note">Оплата будет добавлена позже</p>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        function renderCart() {
+            const cart = getCart();
+            const cartItemsDiv = document.getElementById('cart-items');
+            const emptyCartDiv = document.getElementById('empty-cart');
+            const summaryDiv = document.getElementById('cart-summary');
+            
+            if (cart.length === 0) {
+                cartItemsDiv.style.display = 'none';
+                emptyCartDiv.style.display = 'flex';
+                summaryDiv.style.display = 'none';
+                return;
+            }
+            
+            cartItemsDiv.style.display = 'block';
+            emptyCartDiv.style.display = 'none';
+            summaryDiv.style.display = 'block';
+            
+            cartItemsDiv.innerHTML = cart.map(item => `
+                <div class="cart-item">
+                    <img src="${item.image}" alt="${item.name}" class="cart-item-image">
+                    <div class="cart-item-details">
+                        <div class="cart-item-title">${item.name}</div>
+                        <div class="cart-item-size">Размер: ${item.size}</div>
+                        <div class="cart-item-price">${item.price.toLocaleString()} ₽</div>
+                    </div>
+                    <div class="cart-item-actions">
+                        <div class="cart-quantity">
+                            <button class="cart-qty-btn" onclick="updateQty(${item.id}, '${item.size}', ${item.quantity - 1})">-</button>
+                            <span>${item.quantity}</span>
+                            <button class="cart-qty-btn" onclick="updateQty(${item.id}, '${item.size}', ${item.quantity + 1})">+</button>
+                        </div>
+                        <button class="cart-remove-btn" onclick="removeItem(${item.id}, '${item.size}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+            
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const totalPrice = getCartTotal();
+            
+            document.getElementById('total-items').textContent = totalItems;
+            document.getElementById('total-price').textContent = totalPrice.toLocaleString() + ' ₽';
+        }
+        
+        function updateQty(id, size, newQty) {
+            if (newQty <= 0) {
+                removeItem(id, size);
+            } else {
+                updateQuantity(id, size, newQty);
+                renderCart();
+            }
+        }
+        
+        function removeItem(id, size) {
+            removeFromCart(id, size);
+            renderCart();
+        }
+        
+        document.getElementById('checkout-btn')?.addEventListener('click', () => {
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showPopup({
+                    title: 'ℹ️ Информация',
+                    message: 'Оплата будет добавлена в следующей версии. Пока просто добавьте товары в корзину!',
+                    buttons: [{type: 'ok'}]
+                });
+            } else {
+                alert('Оплата будет добавлена позже!');
+            }
+        });
+        
+        renderCart();
+        updateCartCounter();
+        
+        window.updateQty = updateQty;
+        window.removeItem = removeItem;
+    </script>
+</body>
+</html>

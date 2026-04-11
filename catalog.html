@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Каталог</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            min-height: 100vh;
+        }
+
+        /* Шапка */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--tg-theme-secondary-bg-color, #ffffff);
+            border-bottom: 1px solid var(--tg-theme-hint-color, #e0e0e0);
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .cart-icon {
+            position: relative;
+            font-size: 24px;
+            text-decoration: none;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -12px;
+            background: #ff3b30;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 5px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--tg-theme-link-color, #007aff);
+            padding: 0;
+            width: 32px;
+            text-align: left;
+        }
+
+        /* Каталог */
+        .catalog-container {
+            padding-top: 70px;
+            padding-bottom: 20px;
+        }
+
+        .catalog-header {
+            padding: 20px 16px;
+        }
+
+        .catalog-header h1 {
+            font-size: 28px;
+            margin-bottom: 16px;
+        }
+
+        .category-filter {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .filter-btn {
+            padding: 8px 20px;
+            border-radius: 30px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            color: var(--tg-theme-text-color, #000000);
+            white-space: nowrap;
+        }
+
+        .filter-btn.active {
+            background: #007aff;
+            color: white;
+        }
+
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 16px;
+            padding: 0 16px;
+        }
+
+        .product-card {
+            background: var(--tg-theme-secondary-bg-color, #f8f8f8);
+            border-radius: 16px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .product-card:active {
+            transform: scale(0.98);
+        }
+
+        .product-image {
+            width: 100%;
+            aspect-ratio: 1;
+            overflow: hidden;
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-info {
+            padding: 12px;
+        }
+
+        .product-name {
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .product-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: #007aff;
+            margin-bottom: 8px;
+        }
+
+        .btn-quick-add {
+            width: 100%;
+            padding: 8px;
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 30px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        /* Для отладки */
+        .test-message {
+            background: yellow;
+            padding: 10px;
+            margin: 10px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <button class="back-btn" onclick="history.back()">←</button>
+        <div class="logo">🛍️ Каталог</div>
+        <a href="cart.html" class="cart-icon">
+            🛒
+            <span class="cart-count" style="display: none;">0</span>
+        </a>
+    </div>
+
+    <div class="catalog-container">
+        <div class="catalog-header">
+            <h1>Наши товары</h1>
+            <div class="category-filter">
+                <button class="filter-btn active" data-category="all">Все</button>
+                <button class="filter-btn" data-category="одежда">Одежда</button>
+                <button class="filter-btn" data-category="аксессуары">Аксессуары</button>
+            </div>
+        </div>
+        
+        <div class="products-grid" id="products-grid">
+            <!-- Здесь появятся товары -->
+            <div style="text-align: center; padding: 40px; grid-column: 1/-1;">
+                Загрузка товаров...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ПРОВЕРКА: Виден ли этот текст в консоли?
+        console.log('✅ catalog.html загрузился!');
+        
+        // ВРЕМЕННЫЕ ТОВАРЫ (на случай если data.js не загрузился)
+        const fallbackProducts = [
+            {
+                id: 1,
+                name: "Футболка Classic",
+                price: 1500,
+                images: ["https://placehold.co/600x400/1e90ff/white?text=Футболка"],
+                sizes: ["S", "M", "L"],
+                category: "одежда"
+            },
+            {
+                id: 2,
+                name: "Кепка Street", 
+                price: 890,
+                images: ["https://placehold.co/600x400/32cd32/white?text=Кепка"],
+                sizes: ["S", "M", "L"],
+                category: "аксессуары"
+            }
+        ];
+        
+        // Функции корзины
+        function getCart() {
+            const cart = localStorage.getItem('cart');
+            return cart ? JSON.parse(cart) : [];
+        }
+        
+        function updateCartCounter() {
+            const cart = getCart();
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const counters = document.querySelectorAll('.cart-count');
+            counters.forEach(counter => {
+                if (totalItems > 0) {
+                    counter.textContent = totalItems;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            });
+        }
+        
+        function addToCart(productId, size) {
+            const cart = getCart();
+            const existingItem = cart.find(item => item.id === productId && item.size === size);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                // Ищем товар (сначала в products, потом в fallback)
+                let product = null;
+                if (typeof products !== 'undefined') {
+                    product = products.find(p => p.id === productId);
+                }
+                if (!product) {
+                    product = fallbackProducts.find(p => p.id === productId);
+                }
+                
+                cart.push({
+                    id: productId,
+                    name: product.name,
+                    price: product.price,
+                    size: size,
+                    quantity: 1,
+                    image: product.images[0]
+                });
+            }
+            
+            localStorage.setItem('cart', JSON.stringify(cart));
+            updateCartCounter();
+            
+            // Визуальная обратная связь
+            alert('Товар добавлен в корзину!');
+        }
+        
+        // Рендер каталога
+        function renderCatalog(category = 'all') {
+            const grid = document.getElementById('products-grid');
+            
+            // Определяем, откуда брать товары
+            let productsList = null;
+            if (typeof products !== 'undefined' && products && products.length > 0) {
+                productsList = products;
+                console.log('✅ Использую товары из data.js:', productsList.length);
+            } else {
+                productsList = fallbackProducts;
+                console.log('⚠️ data.js не загружен, использую тестовые товары');
+            }
+            
+            let filteredProducts = productsList;
+            if (category !== 'all') {
+                filteredProducts = productsList.filter(p => p.category === category);
+            }
+            
+            if (filteredProducts.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; padding: 40px; grid-column: 1/-1;">😕 Товары не найдены</div>';
+                return;
+            }
+            
+            grid.innerHTML = filteredProducts.map(product => `
+                <div class="product-card" onclick="window.location.href='product.html?id=${product.id}'">
+                    <div class="product-image">
+                        <img src="${product.images[0]}" alt="${product.name}" onerror="this.src='https://placehold.co/600x400/cccccc/white?text=Нет+фото'">
+                    </div>
+                    <div class="product-info">
+                        <h3 class="product-name">${product.name}</h3>
+                        <p class="product-price">${product.price.toLocaleString()} ₽</p>
+                        <button class="btn-quick-add" onclick="event.stopPropagation(); addToCart(${product.id}, '${product.sizes[0]}')">
+                            🛒 В корзину
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Фильтрация
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderCatalog(btn.dataset.category);
+            });
+        });
+        
+        // Telegram инициализация
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+        }
+        
+        // Запуск
+        renderCatalog();
+        updateCartCounter();
+    </script>
+</body>
+</html>
