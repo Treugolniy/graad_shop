@@ -2,78 +2,117 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Мой магазин</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GRAAD | Главная</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <!-- Шрифт Bebas Neue Cyrillic -->
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+    <style>
+        @font-face {
+            font-family: 'Bebas Neue Cyrillic';
+            src: url('https://fonts.cdnfonts.com/css/bebas-neue') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+        }
+    </style>
 </head>
 <body>
-    <!-- Шапка с корзиной -->
-    <div class="header">
-        <div class="logo">🛍️ Мой магазин</div>
-        <a href="cart.html" class="cart-icon">
-            🛒
-            <span class="cart-count" style="display: none;">0</span>
-        </a>
-    </div>
-
-    <!-- Главный экран с фоновыми фото -->
-    <div class="hero">
-        <div class="background-slider">
-            <div class="slide active" style="background-image: url('https://placehold.co/1920x1080/1a1a2e/white?text=Слайд+1')"></div>
-            <div class="slide" style="background-image: url('https://placehold.co/1920x1080/16213e/white?text=Слайд+2')"></div>
-            <div class="slide" style="background-image: url('https://placehold.co/1920x1080/0f3460/white?text=Слайд+3')"></div>
+    <!-- Хедер с эффектом стекла -->
+    <header class="glass-header">
+        <div class="header-left">
+            <img src="logo.svg" alt="GRΛD" class="logo-icon">
         </div>
-        
-        <div class="hero-content">
-            <h1 class="hero-title">Стиль, который<br>выбираешь ты</h1>
-            <p class="hero-subtitle">Одежда и аксессуары для тех, кто ценит качество</p>
-            
-            <div class="hero-buttons">
-                <a href="catalog.html" class="btn btn-primary">📱 Каталог</a>
-                <a href="https://t.me/your_channel" target="_blank" class="btn btn-secondary">📢 Telegram-канал</a>
+        <div class="header-right">
+            <button class="icon-btn" id="menuBtn">
+                <img src="menu.svg" alt="Меню">
+            </button>
+            <button class="icon-btn" id="cartBtn">
+                <img src="cart.svg" alt="Корзина">
+                <span class="cart-count" style="display: none;">0</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Анимационный экран загрузки (появляется поверх всего) -->
+    <div class="splash-screen" id="splashScreen">
+        <div class="splash-container">
+            <div class="splash-sun" id="splashSun">
+                <img src="sun.svg" alt="Sun">
+            </div>
+            <div class="splash-text" id="splashText">
+                <img src="text.svg" alt="GRΛD">
             </div>
         </div>
-        
-        <!-- Индикаторы слайдов -->
-        <div class="slider-dots">
-            <span class="dot active"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-        </div>
     </div>
+
+    <!-- Основной контент (изначально скрыт) -->
+    <main class="main-content hidden" id="mainContent">
+        <!-- Фоновый слайдер во весь экран -->
+        <div class="fullscreen-slider" id="fullscreenSlider">
+            <div class="slider-slide active" style="background-image: url('1.jpg')"></div>
+            <div class="slider-slide" style="background-image: url('2.jpg')"></div>
+            <div class="slider-slide" style="background-image: url('3.jpg')"></div>
+            <div class="slider-slide" style="background-image: url('4.jpg')"></div>
+            <div class="slider-overlay"></div>
+        </div>
+
+        <!-- Контент поверх слайдера -->
+        <div class="hero-content">
+            <h1 class="hero-title" id="heroTitle">Одежда с брянским духом</h1>
+            
+            <div class="hero-buttons" id="heroButtons">
+                <a href="catalog.html" class="btn btn-primary">Каталог</a>
+                <a href="https://t.me/your_channel" target="_blank" class="btn btn-outline">Telegram-канал</a>
+            </div>
+        </div>
+
+        <!-- Нижние иконки соцсетей -->
+        <div class="social-icons" id="socialIcons">
+            <a href="#" class="social-link"><img src="telegram.svg" alt="Telegram"></a>
+            <a href="#" class="social-link"><img src="tiktok.svg" alt="TikTok"></a>
+            <a href="#" class="social-link"><img src="instagram.svg" alt="Instagram"></a>
+        </div>
+    </main>
 
     <script src="data.js"></script>
     <script src="script.js"></script>
-    <script>
-        // Логика слайдера на главной
-        let currentSlide = 0;
-        const slides = document.querySelectorAll('.slide');
-        const dots = document.querySelectorAll('.dot');
+
+<script>
+    // Используем sessionStorage — данные живут только до закрытия вкладки/приложения
+    const hasSeenAnimation = sessionStorage.getItem('grad_splash_shown');
+    
+    if (!hasSeenAnimation) {
+        // При запуске приложения — показываем анимацию
+        sessionStorage.setItem('grad_splash_shown', 'true');
+        // Анимация запустится автоматически из script.js
+    } else {
+        // При навигации внутри приложения — сразу показываем контент
+        const splashScreen = document.getElementById('splashScreen');
+        const mainContent = document.getElementById('mainContent');
         
-        function showSlide(index) {
-            slides.forEach(slide => slide.classList.remove('active'));
-            dots.forEach(dot => dot.classList.remove('active'));
+        if (splashScreen && mainContent) {
+            splashScreen.style.display = 'none';
+            mainContent.classList.remove('hidden');
             
-            slides[index].classList.add('active');
-            dots[index].classList.add('active');
-            currentSlide = index;
+            document.body.classList.add('has-slider');
+            
+            if (typeof startBackgroundSlider === 'function') {
+                startBackgroundSlider();
+            }
+            
+            setTimeout(() => {
+                const heroTitle = document.getElementById('heroTitle');
+                const heroButtons = document.getElementById('heroButtons');
+                const socialIcons = document.getElementById('socialIcons');
+                
+                if (heroTitle) heroTitle.classList.add('visible');
+                if (heroButtons) heroButtons.classList.add('visible');
+                if (socialIcons) socialIcons.classList.add('visible');
+            }, 100);
         }
-        
-        function nextSlide() {
-            let next = (currentSlide + 1) % slides.length;
-            showSlide(next);
-        }
-        
-        // Автоматическое перелистывание каждые 5 секунд
-        setInterval(nextSlide, 5000);
-        
-        // Клик по точкам
-        dots.forEach((dot, index) => {
-            dot.addEventListener('click', () => showSlide(index));
-        });
-        
-        updateCartCounter();
-    </script>
+    }
+</script>
 </body>
 </html>
