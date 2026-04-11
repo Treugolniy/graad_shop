@@ -1,3 +1,12 @@
+/* ========== ПОДКЛЮЧЕНИЕ ЛОКАЛЬНОГО ШРИФТА ========== */
+@font-face {
+    font-family: 'Bebas Neue Cyrillic';
+    src: url('bebasneuecyrillic.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
 /* ========== ГЛОБАЛЬНЫЕ СТИЛИ ========== */
 * {
     margin: 0;
@@ -6,19 +15,17 @@
     -webkit-tap-highlight-color: transparent;
 }
 
-/* Фон чёрный только для страниц без слайдера (каталог, карточка, корзина) */
 html, body {
     background-color: #000000;
     min-height: 100vh;
 }
 
 body {
-    font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+    font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     overflow-x: hidden;
     position: relative;
 }
 
-/* На главной странице фон не должен перекрывать слайдер */
 body.has-slider {
     background-color: transparent;
 }
@@ -37,11 +44,9 @@ body.has-slider {
     backdrop-filter: blur(15px);
     -webkit-backdrop-filter: blur(15px);
     z-index: 100;
-    transition: all 0.3s ease;
 }
 
-.header-left,
-.header-right {
+.header-left, .header-right {
     display: flex;
     align-items: center;
     gap: 16px;
@@ -50,6 +55,20 @@ body.has-slider {
 .logo-icon {
     height: 32px;
     width: auto;
+    cursor: pointer;
+}
+
+.back-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+.back-btn img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1);
 }
 
 .icon-btn {
@@ -57,21 +76,15 @@ body.has-slider {
     border: none;
     padding: 0;
     cursor: pointer;
-    transition: opacity 0.2s;
     position: relative;
 }
 
 .icon-btn img {
     width: 24px;
     height: 24px;
-    display: block;
+    filter: brightness(0) invert(1);
 }
 
-.icon-btn:active {
-    opacity: 0.7;
-}
-
-/* Счётчик корзины */
 .cart-count {
     position: absolute;
     top: -8px;
@@ -79,7 +92,6 @@ body.has-slider {
     background: #8A1538;
     color: #E6E6E6;
     font-size: 11px;
-    font-weight: bold;
     min-width: 18px;
     height: 18px;
     border-radius: 9px;
@@ -87,10 +99,9 @@ body.has-slider {
     align-items: center;
     justify-content: center;
     padding: 0 5px;
-    font-family: monospace;
 }
 
-/* ========== АНИМАЦИОННЫЙ ЭКРАН (Splash) ========== */
+/* ========== АНИМАЦИОННЫЙ ЭКРАН (SPLASH) ========== */
 .splash-screen {
     position: fixed;
     top: 0;
@@ -100,9 +111,8 @@ body.has-slider {
     background: #000000;
     z-index: 1000;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     overflow: hidden;
 }
 
@@ -124,7 +134,6 @@ body.has-slider {
     height: 600px;
     transition: bottom 1.2s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1;
-    pointer-events: none;
 }
 
 .splash-sun img {
@@ -142,7 +151,6 @@ body.has-slider {
     opacity: 0;
     z-index: 2;
     transition: transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1), opacity 0.4s ease;
-    pointer-events: none;
 }
 
 .splash-text img {
@@ -163,15 +171,13 @@ body.has-slider {
 .splash-screen.animate-out .splash-text {
     transform: translate(-50%, -50%) scale(0);
     opacity: 0;
-    transition: transform 0.5s ease, opacity 0.3s ease;
 }
 
 .splash-screen.animate-out .splash-sun {
     bottom: -100%;
-    transition: bottom 0.8s ease-in;
 }
 
-/* ========== ПОЛНОЭКРАННЫЙ ФОНОВЫЙ СЛАЙДЕР ========== */
+/* ========== ФОНОВЫЙ СЛАЙДЕР ========== */
 .fullscreen-slider {
     position: fixed;
     top: 0;
@@ -190,7 +196,6 @@ body.has-slider {
     height: 100%;
     background-size: cover;
     background-position: center;
-    background-repeat: no-repeat;
     opacity: 0;
     transition: opacity 1.2s ease-in-out;
 }
@@ -209,11 +214,10 @@ body.has-slider {
     z-index: 1;
 }
 
-/* ========== ОСНОВНОЙ КОНТЕНТ ПОВЕРХ СЛАЙДЕРА ========== */
+/* ========== ГЛАВНАЯ СТРАНИЦА ========== */
 .main-content {
     position: relative;
     min-height: 100vh;
-    overflow: hidden;
 }
 
 .main-content.hidden {
@@ -228,7 +232,7 @@ body.has-slider {
     align-items: center;
     justify-content: center;
     min-height: 100vh;
-    padding: 100px 20px 100px;
+    padding: 100px 20px;
     text-align: center;
 }
 
@@ -251,7 +255,6 @@ body.has-slider {
 
 .hero-buttons {
     display: flex;
-    flex-direction: row;
     gap: 16px;
     justify-content: center;
     flex-wrap: wrap;
@@ -269,12 +272,10 @@ body.has-slider {
     padding: 14px 36px;
     border-radius: 60px;
     font-size: 18px;
-    font-weight: 400;
     letter-spacing: 1px;
     text-decoration: none;
     transition: all 0.2s ease;
     font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
-    cursor: pointer;
     display: inline-block;
 }
 
@@ -300,7 +301,6 @@ body.has-slider {
     background: rgba(230, 230, 230, 0.1);
 }
 
-/* Социальные иконки внизу */
 .social-icons {
     position: fixed;
     bottom: 20px;
@@ -320,82 +320,32 @@ body.has-slider {
     transform: translateY(0);
 }
 
-.social-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.2s;
-}
-
 .social-link img {
     width: 24px;
     height: 24px;
     opacity: 0.8;
 }
 
-.social-link:active {
-    opacity: 0.6;
-}
-
 /* ========== АДАПТАЦИЯ ========== */
 @media (max-width: 600px) {
-    .splash-sun {
-        width: 400px;
-        height: 400px;
-    }
-    
-    .splash-text {
-        width: 200px;
-    }
-    
-    .hero-title {
-        font-size: 36px;
-        letter-spacing: 1px;
-    }
-    
-    .btn {
-        padding: 12px 28px;
-        font-size: 16px;
-    }
-    
-    .social-icons {
-        gap: 24px;
-        bottom: 16px;
-    }
-    
-    .social-link img {
-        width: 20px;
-        height: 20px;
-    }
-    
-    .glass-header {
-        padding: 12px 16px;
-    }
-    
-    .logo-icon {
-        height: 28px;
-    }
-    
-    .icon-btn img {
-        width: 22px;
-        height: 22px;
-    }
+    .splash-sun { width: 400px; height: 400px; }
+    .splash-text { width: 200px; }
+}
+
+@media (max-width: 480px) {
+    .glass-header { padding: 12px 16px; }
+    .logo-icon { height: 24px; }
+    .hero-title { font-size: 36px; }
+    .btn { padding: 12px 28px; font-size: 16px; }
+    .social-icons { gap: 24px; bottom: 16px; }
+    .social-link img { width: 20px; height: 20px; }
 }
 
 @media (max-width: 450px) {
-    .splash-sun {
-        width: 350px;
-        height: 350px;
-    }
-    
-    .splash-text {
-        width: 180px;
-    }
+    .splash-sun { width: 350px; height: 350px; }
+    .splash-text { width: 180px; }
 }
 
 @media (min-height: 900px) {
-    .splash-sun {
-        width: 700px;
-        height: 700px;
-    }
+    .splash-sun { width: 700px; height: 700px; }
 }
