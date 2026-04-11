@@ -6,23 +6,11 @@
     <title>GRAAD | Главная</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    
-    <!-- Шрифт Bebas Neue Cyrillic -->
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
-    <style>
-        @font-face {
-            font-family: 'Bebas Neue Cyrillic';
-            src: url('https://fonts.cdnfonts.com/css/bebas-neue') format('truetype');
-            font-weight: normal;
-            font-style: normal;
-        }
-    </style>
 </head>
 <body>
-    <!-- Хедер с эффектом стекла -->
     <header class="glass-header">
         <div class="header-left">
-            <img src="logo.svg" alt="GRΛD" class="logo-icon">
+            <img src="logo.svg" alt="GRΛD" class="logo-icon" id="logoBtn">
         </div>
         <div class="header-right">
             <button class="icon-btn" id="menuBtn">
@@ -35,7 +23,7 @@
         </div>
     </header>
 
-    <!-- Анимационный экран загрузки (появляется поверх всего) -->
+    <!-- Анимационный экран загрузки (сплеш) -->
     <div class="splash-screen" id="splashScreen">
         <div class="splash-container">
             <div class="splash-sun" id="splashSun">
@@ -64,7 +52,7 @@
             
             <div class="hero-buttons" id="heroButtons">
                 <a href="catalog.html" class="btn btn-primary">Каталог</a>
-                <a href="https://t.me/graad32" target="_blank" class="btn btn-outline">Telegram-канал</a>
+                <a href="https://t.me/your_channel" target="_blank" class="btn btn-outline">Telegram-канал</a>
             </div>
         </div>
 
@@ -78,41 +66,39 @@
 
     <script src="data.js"></script>
     <script src="script.js"></script>
-
-<script>
-    // Используем sessionStorage — данные живут только до закрытия вкладки/приложения
-    const hasSeenAnimation = sessionStorage.getItem('grad_splash_shown');
-    
-    if (!hasSeenAnimation) {
-        // При запуске приложения — показываем анимацию
-        sessionStorage.setItem('grad_splash_shown', 'true');
-        // Анимация запустится автоматически из script.js
-    } else {
-        // При навигации внутри приложения — сразу показываем контент
-        const splashScreen = document.getElementById('splashScreen');
-        const mainContent = document.getElementById('mainContent');
+    <script>
+        // sessionStorage — анимация показывается при каждом новом запуске приложения
+        const hasSeenAnimation = sessionStorage.getItem('grad_splash_shown');
         
-        if (splashScreen && mainContent) {
-            splashScreen.style.display = 'none';
-            mainContent.classList.remove('hidden');
+        if (!hasSeenAnimation) {
+            // Первый запуск (после открытия приложения) — показываем анимацию
+            sessionStorage.setItem('grad_splash_shown', 'true');
+            // Анимация запускается автоматически из script.js
+        } else {
+            // Повторный переход на главную (через логотип) — сразу показываем контент
+            const splashScreen = document.getElementById('splashScreen');
+            const mainContent = document.getElementById('mainContent');
             
-            document.body.classList.add('has-slider');
-            
-            if (typeof startBackgroundSlider === 'function') {
-                startBackgroundSlider();
-            }
-            
-            setTimeout(() => {
-                const heroTitle = document.getElementById('heroTitle');
-                const heroButtons = document.getElementById('heroButtons');
-                const socialIcons = document.getElementById('socialIcons');
+            if (splashScreen && mainContent) {
+                splashScreen.style.display = 'none';
+                mainContent.classList.remove('hidden');
+                document.body.classList.add('has-slider');
                 
-                if (heroTitle) heroTitle.classList.add('visible');
-                if (heroButtons) heroButtons.classList.add('visible');
-                if (socialIcons) socialIcons.classList.add('visible');
-            }, 100);
+                if (typeof startBackgroundSlider === 'function') {
+                    startBackgroundSlider();
+                }
+                
+                setTimeout(() => {
+                    const heroTitle = document.getElementById('heroTitle');
+                    const heroButtons = document.getElementById('heroButtons');
+                    const socialIcons = document.getElementById('socialIcons');
+                    
+                    if (heroTitle) heroTitle.classList.add('visible');
+                    if (heroButtons) heroButtons.classList.add('visible');
+                    if (socialIcons) socialIcons.classList.add('visible');
+                }, 100);
+            }
         }
-    }
-</script>
+    </script>
 </body>
 </html>
