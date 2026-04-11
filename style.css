@@ -1004,3 +1004,54 @@ body.has-slider {
 @media (min-height: 900px) {
     .splash-sun { width: 700px; height: 700px; }
 }
+.empty-cart .btn-primary,
+.empty-cart a.btn-primary {
+    display: inline-block;
+    padding: 14px 36px;
+    background: #8A1538;
+    color: #E6E6E6;
+    text-decoration: none;
+    border-radius: 60px;
+    font-size: 16px;
+    font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+}
+
+.empty-cart .btn-primary:active,
+.empty-cart a.btn-primary:active {
+    transform: scale(0.96);
+    background: #6d0f2c;
+}
+
+/* Кнопки на главной странице — центрирование текста */
+.hero-buttons .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+}
+
+/* Дополнительно для всех кнопок, чтобы текст был по центру */
+.btn,
+.btn-primary,
+.btn-outline,
+.btn-quick-add,
+.btn-add-to-cart,
+.btn-checkout,
+.cart-qty-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+/* Фикс для кнопки "В КАТАЛОГ" в корзине — конкретный селектор */
+.cart-container .btn-primary {
+    display: inline-block;
+    text-align: center;
+}
