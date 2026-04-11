@@ -294,6 +294,7 @@ body.has-slider {
     transform: translateY(0);
 }
 
+/* КНОПКИ НА ГЛАВНОЙ — с центрированием */
 .btn {
     padding: 14px 36px;
     border-radius: 60px;
@@ -304,7 +305,11 @@ body.has-slider {
     transition: all 0.2s ease;
     font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
     cursor: pointer;
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
 }
 
 .btn-primary {
@@ -498,6 +503,10 @@ body.has-slider {
     letter-spacing: 0.5px;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .btn-quick-add:active {
@@ -668,6 +677,9 @@ body.has-slider {
     color: #E6E6E6;
     transition: all 0.2s ease;
     text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .size-btn.active {
@@ -708,6 +720,9 @@ body.has-slider {
     cursor: pointer;
     color: #E6E6E6;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .qty-btn:active {
@@ -736,6 +751,10 @@ body.has-slider {
     cursor: pointer;
     transition: all 0.2s ease;
     margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .btn-add-to-cart:active {
@@ -824,6 +843,9 @@ body.has-slider {
     cursor: pointer;
     color: #E6E6E6;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .cart-qty-btn:active {
@@ -883,6 +905,32 @@ body.has-slider {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/* Кнопка "В КАТАЛОГ" в пустой корзине */
+.empty-cart .btn-primary,
+.empty-cart a.btn-primary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 14px 36px;
+    background: #8A1538;
+    color: #E6E6E6;
+    text-decoration: none;
+    border-radius: 60px;
+    font-size: 16px;
+    font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.empty-cart .btn-primary:active,
+.empty-cart a.btn-primary:active {
+    transform: scale(0.96);
+    background: #6d0f2c;
+}
+
 .cart-summary {
     padding: 20px 16px;
     margin: 16px;
@@ -925,6 +973,10 @@ body.has-slider {
     cursor: pointer;
     margin-top: 20px;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 .btn-checkout:active {
@@ -940,7 +992,7 @@ body.has-slider {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
-/* ========== АДАПТАЦИЯ (ОБЩАЯ) ========== */
+/* ========== АДАПТАЦИЯ ========== */
 @media (max-width: 600px) {
     .splash-sun { width: 400px; height: 400px; }
     .splash-text { width: 200px; }
@@ -981,6 +1033,12 @@ body.has-slider {
     .summary-row { font-size: 16px; }
     .summary-row.total { font-size: 20px; }
     .btn-checkout { padding: 14px; font-size: 18px; }
+    
+    .empty-cart .btn-primary,
+    .empty-cart a.btn-primary {
+        padding: 12px 28px;
+        font-size: 14px;
+    }
 }
 
 @media (max-width: 450px) {
@@ -1003,55 +1061,4 @@ body.has-slider {
 
 @media (min-height: 900px) {
     .splash-sun { width: 700px; height: 700px; }
-}
-.empty-cart .btn-primary,
-.empty-cart a.btn-primary {
-    display: inline-block;
-    padding: 14px 36px;
-    background: #8A1538;
-    color: #E6E6E6;
-    text-decoration: none;
-    border-radius: 60px;
-    font-size: 16px;
-    font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
-    letter-spacing: 1px;
-    transition: all 0.2s ease;
-    border: none;
-    cursor: pointer;
-    text-align: center;
-}
-
-.empty-cart .btn-primary:active,
-.empty-cart a.btn-primary:active {
-    transform: scale(0.96);
-    background: #6d0f2c;
-}
-
-/* Кнопки на главной странице — центрирование текста */
-.hero-buttons .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    line-height: 1;
-}
-
-/* Дополнительно для всех кнопок, чтобы текст был по центру */
-.btn,
-.btn-primary,
-.btn-outline,
-.btn-quick-add,
-.btn-add-to-cart,
-.btn-checkout,
-.cart-qty-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
-
-/* Фикс для кнопки "В КАТАЛОГ" в корзине — конкретный селектор */
-.cart-container .btn-primary {
-    display: inline-block;
-    text-align: center;
 }
