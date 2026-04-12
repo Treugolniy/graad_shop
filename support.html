@@ -116,482 +116,458 @@
             <button class="submit-btn" id="submitQuestionBtn">ОТПРАВИТЬ ВОПРОС</button>
         </div>
     </div>
-<script src="data.js"></script>
-<script src="config.js"></script>
-<script>
-    // Telegram данные пользователя
-    let tgUser = null;
-    
-    // Инициализация Telegram
-    if (window.Telegram && window.Telegram.WebApp) {
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
-        tg.enableClosingConfirmation();
+
+    <script src="data.js"></script>
+    <script>
+        // Google Apps Script URL (твой)
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwrJ-hPBxRodP0hkCEV_RjJdhK1aF4_OF9qSuZT86-fjT_QQvNoBK7nIywQFAK7-nIn/exec';
         
-        if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-            tgUser = tg.initDataUnsafe.user;
-            console.log('Пользователь:', tgUser);
+        // Telegram данные пользователя
+        let tgUser = null;
+        
+        // Инициализация Telegram
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                tgUser = tg.initDataUnsafe.user;
+                console.log('Пользователь:', tgUser);
+            }
         }
-    }
-    
-    // Бургер-меню
-    const burgerBtn = document.getElementById('burgerBtn');
-    const burgerMenu = document.getElementById('burgerMenu');
-    const burgerOverlay = document.getElementById('burgerOverlay');
-    const burgerClose = document.getElementById('burgerClose');
-    
-    function openBurger() {
-        burgerMenu.classList.add('open');
-        document.body.style.overflow = 'hidden';
-    }
-    
-    function closeBurger() {
-        burgerMenu.classList.remove('open');
-        document.body.style.overflow = '';
-    }
-    
-    if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
-    if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
-    if (burgerClose) burgerClose.addEventListener('click', closeBurger);
-    
-    document.getElementById('gameLink')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        closeBurger();
-        if (window.Telegram?.WebApp) {
-            window.Telegram.WebApp.showPopup({
-                title: '🎮 Мини-игра',
-                message: 'Игры появятся в следующем обновлении!',
-                buttons: [{type: 'ok'}]
+        
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        // Пункт меню "Получить скидку!"
+        document.getElementById('gameLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeBurger();
+            window.location.href = 'game.html';
+        });
+        
+        // Корзина и логотип
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        // Переключение между формами
+        const reviewBtn = document.getElementById('reviewBtn');
+        const questionBtn = document.getElementById('questionBtn');
+        const reviewForm = document.getElementById('reviewForm');
+        const questionForm = document.getElementById('questionForm');
+        
+        reviewBtn.addEventListener('click', () => {
+            reviewForm.style.display = 'block';
+            questionForm.style.display = 'none';
+            reviewBtn.classList.add('active');
+            questionBtn.classList.remove('active');
+        });
+        
+        questionBtn.addEventListener('click', () => {
+            reviewForm.style.display = 'none';
+            questionForm.style.display = 'block';
+            questionBtn.classList.add('active');
+            reviewBtn.classList.remove('active');
+        });
+        
+        // Звёздочки для рейтинга
+        const stars = document.querySelectorAll('.star');
+        const ratingInput = document.getElementById('reviewRating');
+        
+        stars.forEach(star => {
+            star.addEventListener('click', () => {
+                const value = parseInt(star.dataset.value);
+                ratingInput.value = value;
+                stars.forEach((s, index) => {
+                    if (index < value) {
+                        s.textContent = '★';
+                        s.classList.add('active');
+                    } else {
+                        s.textContent = '☆';
+                        s.classList.remove('active');
+                    }
+                });
+            });
+        });
+        
+        // Работа с изображениями для отзыва
+        let reviewImages = [];
+        const reviewAttachBtn = document.getElementById('reviewAttachBtn');
+        const reviewFileInput = document.getElementById('reviewFileInput');
+        const reviewImageList = document.getElementById('reviewImageList');
+        
+        reviewAttachBtn.addEventListener('click', () => {
+            reviewFileInput.click();
+        });
+        
+        reviewFileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            const remainingSlots = 5 - reviewImages.length;
+            const newFiles = files.slice(0, remainingSlots);
+            
+            newFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    reviewImages.push({
+                        file: file,
+                        preview: event.target.result
+                    });
+                    updateReviewImagePreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            reviewFileInput.value = '';
+        });
+        
+        function updateReviewImagePreview() {
+            reviewImageList.innerHTML = reviewImages.map((img, index) => `
+                <div class="image-preview">
+                    <img src="${img.preview}" alt="preview">
+                    <button class="remove-image" data-index="${index}">✕</button>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('#reviewImageList .remove-image').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(btn.dataset.index);
+                    reviewImages.splice(index, 1);
+                    updateReviewImagePreview();
+                });
             });
         }
-    });
-    
-    // Корзина и логотип
-    document.getElementById('cartBtn')?.addEventListener('click', () => {
-        window.location.href = 'cart.html';
-    });
-    
-    document.getElementById('logoBtn')?.addEventListener('click', () => {
-        window.location.href = 'index.html';
-    });
-    
-    // Переключение между формами
-    const reviewBtn = document.getElementById('reviewBtn');
-    const questionBtn = document.getElementById('questionBtn');
-    const reviewForm = document.getElementById('reviewForm');
-    const questionForm = document.getElementById('questionForm');
-    
-    reviewBtn.addEventListener('click', () => {
-        reviewForm.style.display = 'block';
-        questionForm.style.display = 'none';
-        reviewBtn.classList.add('active');
-        questionBtn.classList.remove('active');
-    });
-    
-    questionBtn.addEventListener('click', () => {
-        reviewForm.style.display = 'none';
-        questionForm.style.display = 'block';
-        questionBtn.classList.add('active');
-        reviewBtn.classList.remove('active');
-    });
-    
-    // Звёздочки для рейтинга
-    const stars = document.querySelectorAll('.star');
-    const ratingInput = document.getElementById('reviewRating');
-    
-    stars.forEach(star => {
-        star.addEventListener('click', () => {
-            const value = parseInt(star.dataset.value);
-            ratingInput.value = value;
-            stars.forEach((s, index) => {
-                if (index < value) {
-                    s.textContent = '★';
-                    s.classList.add('active');
-                } else {
+        
+        // Работа с изображениями для вопроса
+        let questionImages = [];
+        const questionAttachBtn = document.getElementById('questionAttachBtn');
+        const questionFileInput = document.getElementById('questionFileInput');
+        const questionImageList = document.getElementById('questionImageList');
+        
+        questionAttachBtn.addEventListener('click', () => {
+            questionFileInput.click();
+        });
+        
+        questionFileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            const remainingSlots = 5 - questionImages.length;
+            const newFiles = files.slice(0, remainingSlots);
+            
+            newFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    questionImages.push({
+                        file: file,
+                        preview: event.target.result
+                    });
+                    updateQuestionImagePreview();
+                };
+                reader.readAsDataURL(file);
+            });
+            questionFileInput.value = '';
+        });
+        
+        function updateQuestionImagePreview() {
+            questionImageList.innerHTML = questionImages.map((img, index) => `
+                <div class="image-preview">
+                    <img src="${img.preview}" alt="preview">
+                    <button class="remove-image" data-index="${index}">✕</button>
+                </div>
+            `).join('');
+            
+            document.querySelectorAll('#questionImageList .remove-image').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(btn.dataset.index);
+                    questionImages.splice(index, 1);
+                    updateQuestionImagePreview();
+                });
+            });
+        }
+        
+        // Флаги для блокировки повторной отправки
+        let isSendingReview = false;
+        let isSendingQuestion = false;
+        
+        // Отправка данных через Google Apps Script
+        async function sendToGas(message, images) {
+            // Сначала отправляем текст
+            const textResponse = await fetch(GAS_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message, type: 'text' })
+            });
+            
+            // Затем отправляем фото (если есть)
+            for (let i = 0; i < Math.min(images.length, 5); i++) {
+                const img = images[i];
+                const formData = new FormData();
+                formData.append('photo', img.file);
+                formData.append('caption', i === 0 ? `📸 Фото (${i+1}/${Math.min(images.length, 5)})` : '');
+                formData.append('type', 'photo');
+                
+                await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+            }
+        }
+        
+        // Отправка отзыва в Telegram
+        async function sendReviewToTelegram(name, rating, text, images) {
+            if (isSendingReview) return;
+            isSendingReview = true;
+            
+            const submitBtn = document.getElementById('submitReviewBtn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'ОТПРАВЛЯЕМ...';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            
+            const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
+            const userId = tgUser ? tgUser.id : 'неизвестно';
+            
+            let message = `📝 НОВЫЙ ОТЗЫВ\n\n`;
+            message += `👤 Имя: ${name || 'Не указано'}\n`;
+            message += `🆔 Telegram: ${username}\n`;
+            message += `🆔 User ID: ${userId}\n`;
+            message += `⭐ Оценка: ${rating} ★\n`;
+            message += `📝 Отзыв: ${text || 'Без текста'}\n`;
+            message += `🖼️ Фото: ${images.length} шт.\n`;
+            message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            
+            try {
+                await sendToGas(message, images);
+                
+                // Очищаем форму
+                document.getElementById('reviewName').value = '';
+                document.getElementById('reviewText').value = '';
+                ratingInput.value = 0;
+                stars.forEach(s => {
                     s.textContent = '☆';
                     s.classList.remove('active');
+                });
+                reviewImages = [];
+                updateReviewImagePreview();
+                
+                // Скрываем форму
+                reviewForm.style.display = 'none';
+                reviewBtn.classList.remove('active');
+                
+                // Возвращаем кнопку в исходное состояние
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                isSendingReview = false;
+                
+                // Показываем попап с благодарностью
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '✨ Спасибо!',
+                        message: 'Спасибо за ваш отзыв! Он очень важен для нас.',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('✨ Спасибо за отзыв!');
                 }
-            });
-        });
-    });
-    
-    // Работа с изображениями для отзыва
-    let reviewImages = [];
-    const reviewAttachBtn = document.getElementById('reviewAttachBtn');
-    const reviewFileInput = document.getElementById('reviewFileInput');
-    const reviewImageList = document.getElementById('reviewImageList');
-    
-    reviewAttachBtn.addEventListener('click', () => {
-        reviewFileInput.click();
-    });
-    
-    reviewFileInput.addEventListener('change', (e) => {
-        const files = Array.from(e.target.files);
-        const remainingSlots = 5 - reviewImages.length;
-        const newFiles = files.slice(0, remainingSlots);
-        
-        newFiles.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                reviewImages.push({
-                    file: file,
-                    preview: event.target.result
-                });
-                updateReviewImagePreview();
-            };
-            reader.readAsDataURL(file);
-        });
-        reviewFileInput.value = '';
-    });
-    
-    function updateReviewImagePreview() {
-        reviewImageList.innerHTML = reviewImages.map((img, index) => `
-            <div class="image-preview">
-                <img src="${img.preview}" alt="preview">
-                <button class="remove-image" data-index="${index}">✕</button>
-            </div>
-        `).join('');
-        
-        document.querySelectorAll('#reviewImageList .remove-image').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(btn.dataset.index);
-                reviewImages.splice(index, 1);
-                updateReviewImagePreview();
-            });
-        });
-    }
-    
-    // Работа с изображениями для вопроса
-    let questionImages = [];
-    const questionAttachBtn = document.getElementById('questionAttachBtn');
-    const questionFileInput = document.getElementById('questionFileInput');
-    const questionImageList = document.getElementById('questionImageList');
-    
-    questionAttachBtn.addEventListener('click', () => {
-        questionFileInput.click();
-    });
-    
-    questionFileInput.addEventListener('change', (e) => {
-        const files = Array.from(e.target.files);
-        const remainingSlots = 5 - questionImages.length;
-        const newFiles = files.slice(0, remainingSlots);
-        
-        newFiles.forEach(file => {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                questionImages.push({
-                    file: file,
-                    preview: event.target.result
-                });
-                updateQuestionImagePreview();
-            };
-            reader.readAsDataURL(file);
-        });
-        questionFileInput.value = '';
-    });
-    
-    function updateQuestionImagePreview() {
-        questionImageList.innerHTML = questionImages.map((img, index) => `
-            <div class="image-preview">
-                <img src="${img.preview}" alt="preview">
-                <button class="remove-image" data-index="${index}">✕</button>
-            </div>
-        `).join('');
-        
-        document.querySelectorAll('#questionImageList .remove-image').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const index = parseInt(btn.dataset.index);
-                questionImages.splice(index, 1);
-                updateQuestionImagePreview();
-            });
-        });
-    }
-    
-    // Флаги для блокировки повторной отправки
-    let isSendingReview = false;
-    let isSendingQuestion = false;
-    
-    // Отправка отзыва в Telegram
-    async function sendReviewToTelegram(name, rating, text, images) {
-        if (isSendingReview) return;
-        isSendingReview = true;
-        
-        const submitBtn = document.getElementById('submitReviewBtn');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'ОТПРАВЛЯЕМ...';
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.6';
-        
-        const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
-        const userId = tgUser ? tgUser.id : 'неизвестно';
-        
-        let message = `📝 НОВЫЙ ОТЗЫВ\n\n`;
-        message += `👤 Имя: ${name || 'Не указано'}\n`;
-        message += `🆔 Telegram: ${username}\n`;
-        message += `🆔 User ID: ${userId}\n`;
-        message += `⭐ Оценка: ${rating} ★\n`;
-        message += `📝 Отзыв: ${text || 'Без текста'}\n`;
-        message += `🖼️ Фото: ${images.length} шт.\n`;
-        message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
-        
-        try {
-            // Отправляем текст
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: ADMIN_CHAT_ID,
-                    text: message,
-                    parse_mode: 'HTML'
-                })
-            });
-            
-            // Если есть фото — отправляем их
-            for (let i = 0; i < Math.min(images.length, 5); i++) {
-                const img = images[i];
-                const formData = new FormData();
-                formData.append('chat_id', ADMIN_CHAT_ID);
-                formData.append('photo', img.file);
-                formData.append('caption', i === 0 ? `📸 Фото к отзыву (${i+1}/${Math.min(images.length, 5)})` : '');
                 
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                });
-            }
-            
-            // Очищаем форму
-            document.getElementById('reviewName').value = '';
-            document.getElementById('reviewText').value = '';
-            ratingInput.value = 0;
-            stars.forEach(s => {
-                s.textContent = '☆';
-                s.classList.remove('active');
-            });
-            reviewImages = [];
-            updateReviewImagePreview();
-            
-            // Скрываем форму
-            reviewForm.style.display = 'none';
-            reviewBtn.classList.remove('active');
-            
-            // Возвращаем кнопку в исходное состояние
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            isSendingReview = false;
-            
-            // Показываем попап с благодарностью
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: '✨ Спасибо!',
-                    message: 'Спасибо за ваш отзыв! Он очень важен для нас.',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('✨ Спасибо за отзыв!');
-            }
-            
-        } catch (error) {
-            console.error('Ошибка отправки:', error);
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            isSendingReview = false;
-            
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Ошибка',
-                    message: 'Не удалось отправить отзыв. Попробуйте позже.',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('❌ Не удалось отправить отзыв. Попробуйте позже.');
-            }
-        }
-    }
-    
-    // Отправка вопроса в Telegram
-    async function sendQuestionToTelegram(name, text, images) {
-        if (isSendingQuestion) return;
-        isSendingQuestion = true;
-        
-        const submitBtn = document.getElementById('submitQuestionBtn');
-        const originalText = submitBtn.textContent;
-        submitBtn.textContent = 'ОТПРАВЛЯЕМ...';
-        submitBtn.disabled = true;
-        submitBtn.style.opacity = '0.6';
-        
-        const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
-        const userId = tgUser ? tgUser.id : 'неизвестно';
-        
-        let message = `❓ НОВЫЙ ВОПРОС\n\n`;
-        message += `👤 Имя: ${name || 'Не указано'}\n`;
-        message += `🆔 Telegram: ${username}\n`;
-        message += `🆔 User ID: ${userId}\n`;
-        message += `📝 Вопрос: ${text || 'Без текста'}\n`;
-        message += `🖼️ Фото: ${images.length} шт.\n`;
-        message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
-        
-        try {
-            // Отправляем текст
-            await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: ADMIN_CHAT_ID,
-                    text: message,
-                    parse_mode: 'HTML'
-                })
-            });
-            
-            // Если есть фото — отправляем их
-            for (let i = 0; i < Math.min(images.length, 5); i++) {
-                const img = images[i];
-                const formData = new FormData();
-                formData.append('chat_id', ADMIN_CHAT_ID);
-                formData.append('photo', img.file);
-                formData.append('caption', i === 0 ? `📸 Фото к вопросу (${i+1}/${Math.min(images.length, 5)})` : '');
+            } catch (error) {
+                console.error('Ошибка отправки:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                isSendingReview = false;
                 
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, {
-                    method: 'POST',
-                    body: formData
-                });
-            }
-            
-            // Очищаем форму
-            document.getElementById('questionName').value = '';
-            document.getElementById('questionText').value = '';
-            questionImages = [];
-            updateQuestionImagePreview();
-            
-            // Скрываем форму
-            questionForm.style.display = 'none';
-            questionBtn.classList.remove('active');
-            
-            // Возвращаем кнопку в исходное состояние
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            isSendingQuestion = false;
-            
-            // Показываем попап с подтверждением
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: '📨 Передано менеджеру',
-                    message: 'Ваш вопрос передан менеджеру. Ответ придет немного позже!',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('📨 Ваш вопрос передан менеджеру. Ответ придет немного позже!');
-            }
-            
-        } catch (error) {
-            console.error('Ошибка отправки:', error);
-            submitBtn.textContent = originalText;
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            isSendingQuestion = false;
-            
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: '❌ Ошибка',
-                    message: 'Не удалось отправить вопрос. Попробуйте позже.',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('❌ Не удалось отправить вопрос. Попробуйте позже.');
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '❌ Ошибка',
+                        message: 'Не удалось отправить отзыв. Попробуйте позже.',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('❌ Не удалось отправить отзыв. Попробуйте позже.');
+                }
             }
         }
-    }
-    
-    // Обработчики отправки
-    document.getElementById('submitReviewBtn').addEventListener('click', () => {
-        const name = document.getElementById('reviewName').value.trim();
-        const rating = ratingInput.value;
-        const text = document.getElementById('reviewText').value.trim();
         
-        if (!name) {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Ошибка',
-                    message: 'Пожалуйста, укажите ваше имя',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('Пожалуйста, укажите ваше имя');
-            }
-            return;
-        }
-        
-        if (rating == 0) {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Ошибка',
-                    message: 'Пожалуйста, поставьте оценку',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('Пожалуйста, поставьте оценку');
-            }
-            return;
-        }
-        
-        sendReviewToTelegram(name, rating, text, reviewImages);
-    });
-    
-    document.getElementById('submitQuestionBtn').addEventListener('click', () => {
-        const name = document.getElementById('questionName').value.trim();
-        const text = document.getElementById('questionText').value.trim();
-        
-        if (!name) {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Ошибка',
-                    message: 'Пожалуйста, укажите ваше имя',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('Пожалуйста, укажите ваше имя');
-            }
-            return;
-        }
-        
-        if (!text) {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Ошибка',
-                    message: 'Пожалуйста, напишите ваш вопрос',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('Пожалуйста, напишите ваш вопрос');
-            }
-            return;
-        }
-        
-        sendQuestionToTelegram(name, text, questionImages);
-    });
-    
-    // Обновление счётчика корзины
-    function updateCartCounter() {
-        const cart = localStorage.getItem('cart');
-        const items = cart ? JSON.parse(cart) : [];
-        const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
-        const counter = document.querySelector('.cart-count');
-        if (counter) {
-            if (totalCount > 0) {
-                counter.textContent = totalCount;
-                counter.style.display = 'flex';
-            } else {
-                counter.style.display = 'none';
+        // Отправка вопроса в Telegram
+        async function sendQuestionToTelegram(name, text, images) {
+            if (isSendingQuestion) return;
+            isSendingQuestion = true;
+            
+            const submitBtn = document.getElementById('submitQuestionBtn');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'ОТПРАВЛЯЕМ...';
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.6';
+            
+            const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
+            const userId = tgUser ? tgUser.id : 'неизвестно';
+            
+            let message = `❓ НОВЫЙ ВОПРОС\n\n`;
+            message += `👤 Имя: ${name || 'Не указано'}\n`;
+            message += `🆔 Telegram: ${username}\n`;
+            message += `🆔 User ID: ${userId}\n`;
+            message += `📝 Вопрос: ${text || 'Без текста'}\n`;
+            message += `🖼️ Фото: ${images.length} шт.\n`;
+            message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            
+            try {
+                await sendToGas(message, images);
+                
+                // Очищаем форму
+                document.getElementById('questionName').value = '';
+                document.getElementById('questionText').value = '';
+                questionImages = [];
+                updateQuestionImagePreview();
+                
+                // Скрываем форму
+                questionForm.style.display = 'none';
+                questionBtn.classList.remove('active');
+                
+                // Возвращаем кнопку в исходное состояние
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                isSendingQuestion = false;
+                
+                // Показываем попап с подтверждением
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '📨 Передано менеджеру',
+                        message: 'Ваш вопрос передан менеджеру. Ответ придет немного позже!',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('📨 Ваш вопрос передан менеджеру. Ответ придет немного позже!');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка отправки:', error);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                isSendingQuestion = false;
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '❌ Ошибка',
+                        message: 'Не удалось отправить вопрос. Попробуйте позже.',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('❌ Не удалось отправить вопрос. Попробуйте позже.');
+                }
             }
         }
-    }
-    
-    updateCartCounter();
-    console.log('✅ Страница поддержки загружена');
-</script>
+        
+        // Обработчики отправки
+        document.getElementById('submitReviewBtn').addEventListener('click', () => {
+            const name = document.getElementById('reviewName').value.trim();
+            const rating = ratingInput.value;
+            const text = document.getElementById('reviewText').value.trim();
+            
+            if (!name) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Ошибка',
+                        message: 'Пожалуйста, укажите ваше имя',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('Пожалуйста, укажите ваше имя');
+                }
+                return;
+            }
+            
+            if (rating == 0) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Ошибка',
+                        message: 'Пожалуйста, поставьте оценку',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('Пожалуйста, поставьте оценку');
+                }
+                return;
+            }
+            
+            sendReviewToTelegram(name, rating, text, reviewImages);
+        });
+        
+        document.getElementById('submitQuestionBtn').addEventListener('click', () => {
+            const name = document.getElementById('questionName').value.trim();
+            const text = document.getElementById('questionText').value.trim();
+            
+            if (!name) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Ошибка',
+                        message: 'Пожалуйста, укажите ваше имя',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('Пожалуйста, укажите ваше имя');
+                }
+                return;
+            }
+            
+            if (!text) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Ошибка',
+                        message: 'Пожалуйста, напишите ваш вопрос',
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('Пожалуйста, напишите ваш вопрос');
+                }
+                return;
+            }
+            
+            sendQuestionToTelegram(name, text, questionImages);
+        });
+        
+        // Обновление счётчика корзины
+        function updateCartCounter() {
+            const cart = localStorage.getItem('cart');
+            const items = cart ? JSON.parse(cart) : [];
+            const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const counter = document.querySelector('.cart-count');
+            if (counter) {
+                if (totalCount > 0) {
+                    counter.textContent = totalCount;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            }
+        }
+        
+        updateCartCounter();
+        console.log('✅ Страница поддержки загружена');
+    </script>
 </body>
 </html>
