@@ -99,18 +99,40 @@
     <script src="data.js"></script>
     <script src="config.js"></script>
     <script>
+        // Получение информации о пользователе из Telegram
+        let tgUser = null;
+        let tgUsername = 'Гость';
+        
+        // Инициализация Telegram и получение username
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                tgUser = tg.initDataUnsafe.user;
+                // Получаем username или имя пользователя
+                if (tgUser.username) {
+                    tgUsername = `@${tgUser.username}`;
+                } else if (tgUser.first_name) {
+                    tgUsername = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim();
+                } else {
+                    tgUsername = `Пользователь ${tgUser.id}`;
+                }
+                console.log('Пользователь:', tgUsername);
+            }
+        }
+        
         // Текущие данные
         let currentDiscount = 0;
         let appliedPromoCode = null;
         let currentUserId = null;
         
-        // Получение ID пользователя
+        // Получение ID пользователя (для гостей и привязки скидки)
         function getUserId() {
-            if (window.Telegram && window.Telegram.WebApp) {
-                const tg = window.Telegram.WebApp;
-                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                    return tg.initDataUnsafe.user.id.toString();
-                }
+            if (tgUser && tgUser.id) {
+                return tgUser.id.toString();
             }
             let guestId = localStorage.getItem('guest_id');
             if (!guestId) {
@@ -174,23 +196,18 @@
         
         // Проверка промокода
         function checkPromoCode(promoCode) {
-            // Ожидаемый формат: GRAAD_username или GRAAD_userId
             const expectedPrefix = 'GRAAD_';
             if (!promoCode || !promoCode.startsWith(expectedPrefix)) {
                 return { valid: false, message: 'Неверный формат промокода. Промокод должен начинаться с GRAAD_' };
             }
             
             const codeValue = promoCode.substring(expectedPrefix.length);
-            
-            // Получаем все сохранённые скидки
             const savedDiscounts = localStorage.getItem('grad_discounts');
             if (!savedDiscounts) {
                 return { valid: false, message: 'Промокод не найден. Получите скидку в игре "Колесо фортуны"' };
             }
             
             const discounts = JSON.parse(savedDiscounts);
-            
-            // Ищем скидку по userId
             const discountEntry = discounts.find(d => 
                 d.userId === codeValue || 
                 d.userId === currentUserId ||
@@ -201,7 +218,6 @@
                 return { valid: false, message: 'Промокод не найден. Проверьте правильность ввода или получите скидку в игре' };
             }
             
-            // Проверяем, не использован ли уже промокод
             const usedPromoCodes = localStorage.getItem('used_promocodes');
             const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
             if (used.includes(promoCode)) {
@@ -224,24 +240,20 @@
                 currentDiscount = result.discount;
                 appliedPromoCode = promoCode;
                 
-                // Сохраняем использованный промокод
                 const usedPromoCodes = localStorage.getItem('used_promocodes');
                 const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
                 used.push(promoCode);
                 localStorage.setItem('used_promocodes', JSON.stringify(used));
                 
-                // Показываем сообщение об успехе
                 const promoMessage = document.getElementById('promoMessage');
                 promoMessage.textContent = result.message;
                 promoMessage.style.color = '#4caf50';
                 
-                // Сворачиваем блок промокода
                 const promoBody = document.getElementById('promoBody');
                 const promoToggle = document.getElementById('promoToggle');
                 promoBody.style.display = 'none';
                 promoToggle.textContent = '▼';
                 
-                // Обновляем отображение корзины
                 renderCart();
                 
                 if (window.Telegram?.WebApp) {
@@ -302,7 +314,6 @@
             
             document.getElementById('total-items').textContent = totalItems;
             
-            // Отображаем скидку если она есть
             const discountRow = document.getElementById('discountRow');
             const discountAmountRow = document.getElementById('discountAmountRow');
             const discountPercentSpan = document.getElementById('discount-percent');
@@ -353,21 +364,6 @@
         if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
         if (burgerClose) burgerClose.addEventListener('click', closeBurger);
         
-        // Telegram инициализация
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            tg.enableClosingConfirmation();
-            
-            const backButton = tg.BackButton;
-            if (backButton) {
-                backButton.onClick(() => {
-                    window.history.back();
-                });
-            }
-        }
-        
         // Обработчики кнопок
         document.getElementById('cartBtn')?.addEventListener('click', () => {
             renderCart();
@@ -411,8 +407,12 @@
             const cart = getCart();
             if (cart.length === 0) return;
             
+            // Формируем сообщение с username вместо ID
             let message = `🧾 НОВЫЙ ЗАКАЗ\n\n`;
-            message += `👤 ID покупателя: ${currentUserId}\n`;
+            message += `👤 Покупатель: ${tgUsername}\n`;
+            if (tgUser && tgUser.id) {
+                message += `🆔 Telegram ID: ${tgUser.id}\n`;
+            }
             if (currentDiscount > 0) {
                 message += `🏷️ Промокод: ${appliedPromoCode} (скидка ${currentDiscount}%)\n`;
             }
