@@ -121,6 +121,10 @@
         let tgUsername = 'Гость';
         let orderPlaced = false; // Флаг, что заказ оформлен
         let isSendingReceipt = false; // Флаг для блокировки повторной отправки чека
+        let isSendingOrder = false; // Флаг для блокировки повторной отправки заказа
+        
+        // Ключ для сохранения состояния блока чека в localStorage
+        const RECEIPT_SECTION_KEY = 'grad_receipt_section_shown';
         
         // Инициализация Telegram и получение username
         if (window.Telegram && window.Telegram.WebApp) {
@@ -368,8 +372,12 @@
             const receiptSection = document.getElementById('receiptSection');
             if (receiptSection) {
                 receiptSection.style.display = 'block';
+                // Сохраняем в localStorage, что блок показан
+                localStorage.setItem(RECEIPT_SECTION_KEY, 'true');
                 // Прокручиваем к блоку с чеком
-                receiptSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                setTimeout(() => {
+                    receiptSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
             }
         }
         
@@ -378,6 +386,8 @@
             if (receiptSection) {
                 receiptSection.style.display = 'none';
             }
+            // Удаляем из localStorage
+            localStorage.removeItem(RECEIPT_SECTION_KEY);
             // Очищаем форму
             selectedReceipt = null;
             document.getElementById('receiptPreviewList').innerHTML = '';
@@ -387,6 +397,18 @@
                 sendBtn.textContent = 'ОТПРАВИТЬ ЧЕК';
             }
             isSendingReceipt = false;
+        }
+        
+        // Проверка сохранённого состояния блока чека при загрузке страницы
+        function checkSavedReceiptSection() {
+            const savedState = localStorage.getItem(RECEIPT_SECTION_KEY);
+            if (savedState === 'true') {
+                const receiptSection = document.getElementById('receiptSection');
+                if (receiptSection) {
+                    receiptSection.style.display = 'block';
+                    orderPlaced = true;
+                }
+            }
         }
         
         // Прикрепление файла
@@ -452,7 +474,7 @@
         // Отправка чека админу
         sendReceiptBtn?.addEventListener('click', async () => {
             if (!selectedReceipt) return;
-            if (isSendingReceipt) return; // Защита от повторной отправки
+            if (isSendingReceipt) return;
             
             isSendingReceipt = true;
             const originalBtnText = sendReceiptBtn.textContent;
@@ -532,6 +554,17 @@
             const cart = getCart();
             if (cart.length === 0) return;
             
+            // Защита от повторной отправки
+            if (isSendingOrder) return;
+            isSendingOrder = true;
+            
+            // Блокируем кнопку и меняем текст
+            const checkoutBtn = document.getElementById('checkout-btn');
+            const originalBtnText = checkoutBtn.textContent;
+            checkoutBtn.textContent = 'ОФОРМЛЯЕМ...';
+            checkoutBtn.disabled = true;
+            checkoutBtn.style.opacity = '0.6';
+            
             // Получаем информацию о пользователе
             let userMention = '';
             let userFirstName = '';
@@ -595,24 +628,24 @@
             // Сообщение для клиента с реквизитами
             const orderItems = cart.map(item => `  • ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽`).join('\n');
             
-const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
-    `📦 <b>Состав заказа:</b>\n${orderItems}\n\n` +
-    `💰 <b>Сумма к оплате:</b> ${finalTotal.toLocaleString()} ₽\n\n` +
-    `💳 <b>Реквизиты для оплаты:</b>\n` +
-    `📱 <b>Номер телефона (СБП):</b> <code>+7 900 355-00-88</code>\n` +
-    `👤 <b>Получатель:</b> АРСЕНИЙ М.\n` +
-    `🏦 <b>Банк:</b> Альфа-Банк\n\n` +
-    `📝 <b>Как оплатить:</b>\n` +
-    `1. Нажмите и удерживайте номер, чтобы скопировать\n` +
-    `2. Вставьте в приложение банка\n` +
-    `3. Введите сумму ${finalTotal.toLocaleString()} ₽\n` +
-    `4. Подтвердите перевод\n\n` +
-    `📎 <b>После оплаты:</b>\n` +
-    `• Вернитесь в корзину\n` +
-    `• Прикрепите чек внизу страницы\n` +
-    `• Менеджер проверит оплату и свяжется с вами\n\n` +
-    `⚠️ Чек действителен 24 часа.\n\n` +
-    `<i>Если у вас возникли вопросы, напишите @gust0ff</i>`;
+            const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
+                `📦 <b>Состав заказа:</b>\n${orderItems}\n\n` +
+                `💰 <b>Сумма к оплате:</b> ${finalTotal.toLocaleString()} ₽\n\n` +
+                `💳 <b>Реквизиты для оплаты:</b>\n` +
+                `📱 <b>Номер телефона (СБП):</b> <code>+7 900 355-00-88</code>\n` +
+                `👤 <b>Получатель:</b> АРСЕНИЙ М.\n` +
+                `🏦 <b>Банк:</b> Альфа-Банк\n\n` +
+                `📝 <b>Как оплатить:</b>\n` +
+                `1. Нажмите и удерживайте номер, чтобы скопировать\n` +
+                `2. Вставьте в приложение банка\n` +
+                `3. Введите сумму ${finalTotal.toLocaleString()} ₽\n` +
+                `4. Подтвердите перевод\n\n` +
+                `📎 <b>После оплаты:</b>\n` +
+                `• Вернитесь в корзину\n` +
+                `• Прикрепите чек внизу страницы\n` +
+                `• Менеджер проверит оплату и свяжется с вами\n\n` +
+                `⚠️ Чек действителен 24 часа.\n\n` +
+                `<i>Если у вас возникли вопросы, напишите @gust0ff</i>`;
             
             if (userTelegramId) {
                 try {
@@ -640,6 +673,11 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
             // Устанавливаем флаг, что заказ оформлен
             orderPlaced = true;
             
+            // Восстанавливаем кнопку (она останется неактивной, но вернём текст)
+            checkoutBtn.textContent = originalBtnText;
+            checkoutBtn.disabled = true;
+            checkoutBtn.style.opacity = '0.5';
+            
             // Показываем попап
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.showPopup({
@@ -654,6 +692,8 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
                 alert('Заказ оформлен! Проверьте сообщение от бота.');
                 showReceiptSection();
             }
+            
+            isSendingOrder = false;
         });
         
         // Бургер-меню
@@ -688,6 +728,9 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
         // Запуск
         renderCart();
         updateCartCounter();
+        
+        // Проверяем сохранённое состояние блока чека
+        checkSavedReceiptSection();
         
         window.updateQty = updateQty;
         window.removeItem = removeItem;
@@ -883,6 +926,12 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
         
         .btn-checkout {
             margin-top: 20px;
+        }
+        
+        .btn-checkout:disabled {
+            opacity: 0.5;
+            transform: none;
+            cursor: not-allowed;
         }
         
         .checkout-note {
