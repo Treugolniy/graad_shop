@@ -3,25 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>GRΛD | Товар</title>
+    <title>GRAAD | Товар</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <!-- Бургер-меню -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
     <header class="glass-header">
         <div class="header-left">
-            <button class="back-btn" onclick="history.back()">
-                <img src="arrow-back.svg" alt="Назад" onerror="this.style.display='none'; this.outerHTML='←'">
-            </button>
-            <img src="logo.svg" alt="GRΛD" class="logo-icon" id="logoBtn">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
         </div>
         <div class="header-right">
-            <button class="icon-btn" id="menuBtn">
-                <img src="menu.svg" alt="Меню">
-            </button>
             <button class="icon-btn" id="cartBtn">
                 <img src="cart.svg" alt="Корзина">
                 <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
             </button>
         </div>
     </header>
@@ -31,7 +48,7 @@
     </div>
 
     <script src="data.js"></script>
-    <script src="script.js"></script>
+    <script src="config.js"></script>
     <script>
         // Получаем ID товара из URL
         const urlParams = new URLSearchParams(window.location.search);
@@ -46,7 +63,34 @@
         let selectedSize = product.sizes[0];
         let quantity = 1;
         
-        // Функции корзины (если не определены в script.js)
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        // Пункты меню (кроме основных ссылок)
+        document.getElementById('gameLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeBurger();
+            window.location.href = 'game.html';
+        });
+        
+        // Функции корзины
         function getCart() {
             const cart = localStorage.getItem('cart');
             return cart ? JSON.parse(cart) : [];
@@ -248,16 +292,6 @@
         // Обработчики кнопок
         document.getElementById('cartBtn')?.addEventListener('click', () => {
             window.location.href = 'cart.html';
-        });
-        
-        document.getElementById('menuBtn')?.addEventListener('click', () => {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Меню',
-                    message: 'Навигация появится скоро',
-                    buttons: [{type: 'close'}]
-                });
-            }
         });
         
         // Клик по логотипу — возврат на главную
