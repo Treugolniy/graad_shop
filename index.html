@@ -8,17 +8,37 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <!-- Бургер-меню (боковая панель) -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
     <header class="glass-header">
         <div class="header-left">
-            <img src="logo.svg" alt="GRΛD" class="logo-icon" id="logoBtn">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
         </div>
         <div class="header-right">
-            <button class="icon-btn" id="menuBtn">
-                <img src="menu.svg" alt="Меню">
-            </button>
             <button class="icon-btn" id="cartBtn">
                 <img src="cart.svg" alt="Корзина">
                 <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
             </button>
         </div>
     </header>
@@ -30,7 +50,7 @@
                 <img src="sun.svg" alt="Sun">
             </div>
             <div class="splash-text" id="splashText">
-                <img src="text.svg" alt="GRΛD">
+                <img src="text.svg" alt="GRAAD">
             </div>
         </div>
     </div>
@@ -48,7 +68,9 @@
 
         <!-- Контент поверх слайдера -->
         <div class="hero-content">
-            <h1 class="hero-title" id="heroTitle">Одежда с брянским духом</h1>
+            <h1 class="hero-title" id="heroTitle">
+                Одежда с<br>брянским духом
+            </h1>
             
             <div class="hero-buttons" id="heroButtons">
                 <a href="catalog.html" class="btn btn-primary">Каталог</a>
@@ -58,9 +80,77 @@
 
         <!-- Нижние иконки соцсетей -->
         <div class="social-icons" id="socialIcons">
-            <a href="#" class="social-link"><img src="telegram.svg" alt="Telegram"></a>
-            <a href="#" class="social-link"><img src="tiktok.svg" alt="TikTok"></a>
+            <a href="https://t.me/graad32" class="social-link"><img src="telegram.svg" alt="Telegram"></a>
+            <a href="https://www.tiktok.com/@graad32" class="social-link"><img src="tiktok.svg" alt="TikTok"></a>
             <a href="#" class="social-link"><img src="instagram.svg" alt="Instagram"></a>
+        </div>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        burgerBtn?.addEventListener('click', openBurger);
+        burgerOverlay?.addEventListener('click', closeBurger);
+        burgerClose?.addEventListener('click', closeBurger);
+        
+        // Корзина
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        // Логотип на главную (уже на главной, но оставим)
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        // sessionStorage — анимация показывается при каждом новом запуске приложения
+        const hasSeenAnimation = sessionStorage.getItem('grad_splash_shown');
+        
+        if (!hasSeenAnimation) {
+            sessionStorage.setItem('grad_splash_shown', 'true');
+        } else {
+            const splashScreen = document.getElementById('splashScreen');
+            const mainContent = document.getElementById('mainContent');
+            
+            if (splashScreen && mainContent) {
+                splashScreen.style.display = 'none';
+                mainContent.classList.remove('hidden');
+                document.body.classList.add('has-slider');
+                
+                if (typeof startBackgroundSlider === 'function') {
+                    startBackgroundSlider();
+                }
+                
+                setTimeout(() => {
+                    const heroTitle = document.getElementById('heroTitle');
+                    const heroButtons = document.getElementById('heroButtons');
+                    const socialIcons = document.getElementById('socialIcons');
+                    
+                    if (heroTitle) heroTitle.classList.add('visible');
+                    if (heroButtons) heroButtons.classList.add('visible');
+                    if (socialIcons) socialIcons.classList.add('visible');
+                }, 100);
+            }
+        }
+    </script>
+</body>
+</html>            <a href="#" class="social-link"><img src="instagram.svg" alt="Instagram"></a>
         </div>
     </main>
 
