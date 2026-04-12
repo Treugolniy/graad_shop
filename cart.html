@@ -3,25 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>GRΛD | Корзина</title>
+    <title>GRAAD | Корзина</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <!-- Бургер-меню -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
     <header class="glass-header">
         <div class="header-left">
-            <button class="back-btn" onclick="history.back()">
-                <img src="arrow-back.svg" alt="Назад" onerror="this.style.display='none'; this.outerHTML='←'">
-            </button>
-            <img src="logo.svg" alt="GRΛD" class="logo-icon" id="logoBtn">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
         </div>
         <div class="header-right">
-            <button class="icon-btn" id="menuBtn">
-                <img src="menu.svg" alt="Меню">
-            </button>
             <button class="icon-btn" id="cartBtn">
                 <img src="cart.svg" alt="Корзина">
                 <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
             </button>
         </div>
     </header>
@@ -39,9 +56,34 @@
         </div>
         
         <div id="cart-summary" class="cart-summary" style="display: none;">
+            <!-- Блок промокода -->
+            <div class="promo-section">
+                <div class="promo-header">
+                    <span>🎁 ПРОМОКОД</span>
+                    <button class="promo-toggle" id="promoToggle">▼</button>
+                </div>
+                <div class="promo-body" id="promoBody" style="display: none;">
+                    <p class="promo-hint">Введите промокод, полученный в игре "Колесо фортуны"</p>
+                    <div class="promo-input-group">
+                        <input type="text" id="promoInput" class="promo-input" placeholder="GRAAD_...">
+                        <button class="promo-apply" id="applyPromoBtn">ПРИМЕНИТЬ</button>
+                    </div>
+                    <div id="promoMessage" class="promo-message"></div>
+                </div>
+            </div>
+
+            <!-- Итого -->
             <div class="summary-row">
                 <span>ТОВАРОВ:</span>
                 <span id="total-items">0</span>
+            </div>
+            <div class="summary-row" id="discountRow" style="display: none;">
+                <span>СКИДКА:</span>
+                <span id="discount-percent">0%</span>
+            </div>
+            <div class="summary-row" id="discountAmountRow" style="display: none;">
+                <span>СУММА СКИДКИ:</span>
+                <span id="discount-amount">0 ₽</span>
             </div>
             <div class="summary-row total">
                 <span>ИТОГО:</span>
@@ -55,9 +97,32 @@
     </div>
 
     <script src="data.js"></script>
-    <script src="script.js"></script>
+    <script src="config.js"></script>
     <script>
-        // Функции корзины (если не определены в script.js)
+        // Текущие данные
+        let currentDiscount = 0;
+        let appliedPromoCode = null;
+        let currentUserId = null;
+        
+        // Получение ID пользователя
+        function getUserId() {
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    return tg.initDataUnsafe.user.id.toString();
+                }
+            }
+            let guestId = localStorage.getItem('guest_id');
+            if (!guestId) {
+                guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+                localStorage.setItem('guest_id', guestId);
+            }
+            return guestId;
+        }
+        
+        currentUserId = getUserId();
+        
+        // Функции корзины
         function getCart() {
             const cart = localStorage.getItem('cart');
             return cart ? JSON.parse(cart) : [];
@@ -107,6 +172,92 @@
             }
         }
         
+        // Проверка промокода
+        function checkPromoCode(promoCode) {
+            // Ожидаемый формат: GRAAD_username или GRAAD_userId
+            const expectedPrefix = 'GRAAD_';
+            if (!promoCode || !promoCode.startsWith(expectedPrefix)) {
+                return { valid: false, message: 'Неверный формат промокода. Промокод должен начинаться с GRAAD_' };
+            }
+            
+            const codeValue = promoCode.substring(expectedPrefix.length);
+            
+            // Получаем все сохранённые скидки
+            const savedDiscounts = localStorage.getItem('grad_discounts');
+            if (!savedDiscounts) {
+                return { valid: false, message: 'Промокод не найден. Получите скидку в игре "Колесо фортуны"' };
+            }
+            
+            const discounts = JSON.parse(savedDiscounts);
+            
+            // Ищем скидку по userId
+            const discountEntry = discounts.find(d => 
+                d.userId === codeValue || 
+                d.userId === currentUserId ||
+                (currentUserId && d.userId === currentUserId)
+            );
+            
+            if (!discountEntry) {
+                return { valid: false, message: 'Промокод не найден. Проверьте правильность ввода или получите скидку в игре' };
+            }
+            
+            // Проверяем, не использован ли уже промокод
+            const usedPromoCodes = localStorage.getItem('used_promocodes');
+            const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
+            if (used.includes(promoCode)) {
+                return { valid: false, message: 'Этот промокод уже был использован' };
+            }
+            
+            return { 
+                valid: true, 
+                discount: discountEntry.discount,
+                message: `Промокод принят! Скидка ${discountEntry.discount}%`,
+                discountEntry: discountEntry
+            };
+        }
+        
+        // Применение промокода
+        function applyPromoCode(promoCode) {
+            const result = checkPromoCode(promoCode);
+            
+            if (result.valid) {
+                currentDiscount = result.discount;
+                appliedPromoCode = promoCode;
+                
+                // Сохраняем использованный промокод
+                const usedPromoCodes = localStorage.getItem('used_promocodes');
+                const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
+                used.push(promoCode);
+                localStorage.setItem('used_promocodes', JSON.stringify(used));
+                
+                // Показываем сообщение об успехе
+                const promoMessage = document.getElementById('promoMessage');
+                promoMessage.textContent = result.message;
+                promoMessage.style.color = '#4caf50';
+                
+                // Сворачиваем блок промокода
+                const promoBody = document.getElementById('promoBody');
+                const promoToggle = document.getElementById('promoToggle');
+                promoBody.style.display = 'none';
+                promoToggle.textContent = '▼';
+                
+                // Обновляем отображение корзины
+                renderCart();
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Промокод принят!',
+                        message: result.message,
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            } else {
+                const promoMessage = document.getElementById('promoMessage');
+                promoMessage.textContent = result.message;
+                promoMessage.style.color = '#ff3b30';
+            }
+        }
+        
         // Рендер корзины
         function renderCart() {
             const cart = getCart();
@@ -127,7 +278,7 @@
             
             cartItemsDiv.innerHTML = cart.map(item => `
                 <div class="cart-item">
-                    <img src="${item.image}" alt="${item.name}" class="cart-item-image" onerror="this.src='https://placehold.co/400/333333/E6E6E6?text=GRΛD'">
+                    <img src="${item.image}" alt="${item.name}" class="cart-item-image" onerror="this.src='https://placehold.co/400/333333/E6E6E6?text=GRAAD'">
                     <div class="cart-item-details">
                         <div class="cart-item-title">${item.name}</div>
                         <div class="cart-item-size">Размер: ${item.size}</div>
@@ -145,10 +296,29 @@
             `).join('');
             
             const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-            const totalPrice = getCartTotal();
+            const subtotal = getCartTotal();
+            const discountAmount = Math.round(subtotal * currentDiscount / 100);
+            const finalTotal = subtotal - discountAmount;
             
             document.getElementById('total-items').textContent = totalItems;
-            document.getElementById('total-price').textContent = totalPrice.toLocaleString() + ' ₽';
+            
+            // Отображаем скидку если она есть
+            const discountRow = document.getElementById('discountRow');
+            const discountAmountRow = document.getElementById('discountAmountRow');
+            const discountPercentSpan = document.getElementById('discount-percent');
+            const discountAmountSpan = document.getElementById('discount-amount');
+            
+            if (currentDiscount > 0) {
+                discountRow.style.display = 'flex';
+                discountAmountRow.style.display = 'flex';
+                discountPercentSpan.textContent = `${currentDiscount}%`;
+                discountAmountSpan.textContent = `- ${discountAmount.toLocaleString()} ₽`;
+                document.getElementById('total-price').textContent = finalTotal.toLocaleString() + ' ₽';
+            } else {
+                discountRow.style.display = 'none';
+                discountAmountRow.style.display = 'none';
+                document.getElementById('total-price').textContent = subtotal.toLocaleString() + ' ₽';
+            }
         }
         
         function updateQty(id, size, newQty) {
@@ -162,6 +332,26 @@
         function removeItem(id, size) {
             removeFromCart(id, size);
         }
+        
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
         
         // Telegram инициализация
         if (window.Telegram && window.Telegram.WebApp) {
@@ -183,43 +373,195 @@
             renderCart();
         });
         
-        document.getElementById('menuBtn')?.addEventListener('click', () => {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Меню',
-                    message: 'Навигация появится скоро',
-                    buttons: [{type: 'close'}]
-                });
-            }
-        });
-        
-        // Клик по логотипу — возврат на главную
         document.getElementById('logoBtn')?.addEventListener('click', () => {
             window.location.href = 'index.html';
         });
         
+        // Промокод: раскрытие/скрытие
+        const promoToggle = document.getElementById('promoToggle');
+        const promoBody = document.getElementById('promoBody');
+        
+        promoToggle?.addEventListener('click', () => {
+            if (promoBody.style.display === 'none') {
+                promoBody.style.display = 'block';
+                promoToggle.textContent = '▲';
+            } else {
+                promoBody.style.display = 'none';
+                promoToggle.textContent = '▼';
+            }
+        });
+        
+        // Применение промокода
+        document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
+            const promoInput = document.getElementById('promoInput');
+            const promoCode = promoInput.value.trim().toUpperCase();
+            
+            if (!promoCode) {
+                const promoMessage = document.getElementById('promoMessage');
+                promoMessage.textContent = 'Введите промокод';
+                promoMessage.style.color = '#ff3b30';
+                return;
+            }
+            
+            applyPromoCode(promoCode);
+        });
+        
         // Кнопка оформления заказа
         document.getElementById('checkout-btn')?.addEventListener('click', () => {
+            const cart = getCart();
+            if (cart.length === 0) return;
+            
+            let message = `🧾 НОВЫЙ ЗАКАЗ\n\n`;
+            message += `👤 ID покупателя: ${currentUserId}\n`;
+            if (currentDiscount > 0) {
+                message += `🏷️ Промокод: ${appliedPromoCode} (скидка ${currentDiscount}%)\n`;
+            }
+            message += `📦 Товары:\n`;
+            
+            cart.forEach(item => {
+                message += `  - ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽\n`;
+            });
+            
+            const subtotal = getCartTotal();
+            const discountAmount = Math.round(subtotal * currentDiscount / 100);
+            const finalTotal = subtotal - discountAmount;
+            
+            message += `\n💰 Сумма: ${subtotal.toLocaleString()} ₽\n`;
+            if (currentDiscount > 0) {
+                message += `🎁 Скидка ${currentDiscount}%: -${discountAmount.toLocaleString()} ₽\n`;
+            }
+            message += `💎 Итого: ${finalTotal.toLocaleString()} ₽\n`;
+            message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            
+            // Отправка в Telegram
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: ADMIN_CHAT_ID,
+                    text: message,
+                    parse_mode: 'HTML'
+                })
+            }).catch(err => console.error('Ошибка отправки:', err));
+            
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.showPopup({
-                    title: 'ℹ️',
-                    message: 'Оплата будет добавлена в следующей версии',
+                    title: '✅ Заказ оформлен!',
+                    message: 'Ваш заказ передан менеджеру. Скоро с вами свяжутся!',
                     buttons: [{type: 'ok'}]
                 });
             } else {
-                alert('Оплата будет добавлена позже!');
+                alert('Заказ оформлен! С вами свяжутся.');
             }
+            
+            // Очищаем корзину
+            localStorage.setItem('cart', JSON.stringify([]));
+            currentDiscount = 0;
+            appliedPromoCode = null;
+            renderCart();
+            updateCartCounter();
         });
         
         // Запуск
         renderCart();
         updateCartCounter();
         
-        // Делаем функции глобальными для onclick
         window.updateQty = updateQty;
         window.removeItem = removeItem;
         
         console.log('✅ Корзина загружена');
     </script>
+    
+    <style>
+        /* Дополнительные стили для промокода */
+        .promo-section {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 16px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .promo-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            letter-spacing: 1px;
+            color: rgba(230, 230, 230, 0.8);
+        }
+        
+        .promo-toggle {
+            background: none;
+            border: none;
+            color: #E6E6E6;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .promo-body {
+            padding: 0 16px 16px 16px;
+        }
+        
+        .promo-hint {
+            font-size: 12px;
+            color: rgba(230, 230, 230, 0.5);
+            margin-bottom: 12px;
+        }
+        
+        .promo-input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .promo-input {
+            flex: 1;
+            padding: 12px 14px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(230, 230, 230, 0.2);
+            border-radius: 12px;
+            font-size: 14px;
+            color: #E6E6E6;
+            font-family: monospace;
+        }
+        
+        .promo-input:focus {
+            outline: none;
+            border-color: #8A1538;
+        }
+        
+        .promo-apply {
+            padding: 12px 20px;
+            background: #8A1538;
+            border: none;
+            border-radius: 12px;
+            color: #E6E6E6;
+            font-size: 14px;
+            font-family: 'Bebas Neue Cyrillic', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+        }
+        
+        .promo-apply:active {
+            transform: scale(0.96);
+        }
+        
+        .promo-message {
+            font-size: 12px;
+            margin-top: 10px;
+            text-align: center;
+        }
+        
+        @media (max-width: 480px) {
+            .promo-input-group {
+                flex-direction: column;
+            }
+            
+            .promo-apply {
+                padding: 10px;
+            }
+        }
+    </style>
 </body>
 </html>
