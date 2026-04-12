@@ -6,6 +6,35 @@
     <title>GRAAD | Товар</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* Дополнительные стили для кнопок размеров */
+        .size-btn {
+            min-width: 56px;
+            padding: 10px 0;
+            border-radius: 60px;
+            background: rgba(230, 230, 230, 0.1);
+            border: none;
+            font-size: 16px;
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            color: #E6E6E6;
+            transition: all 0.2s ease;
+            text-align: center;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .size-btn.active {
+            background: #8A1538 !important;
+            color: #E6E6E6 !important;
+        }
+        
+        .size-btn:active {
+            transform: scale(0.96);
+        }
+    </style>
 </head>
 <body>
     <!-- Бургер-меню -->
@@ -202,10 +231,9 @@
                     
                     <div class="size-selector">
                         <h3>ВЫБЕРИТЕ РАЗМЕР</h3>
-                        <div class="size-buttons">
+                        <div class="size-buttons" id="sizeButtons">
                             ${product.sizes.map(size => `
-                                <button class="size-btn ${size === selectedSize ? 'active' : ''}" 
-                                        onclick="selectSize('${size}')">
+                                <button class="size-btn ${size === selectedSize ? 'active' : ''}" data-size="${size}">
                                     ${size}
                                 </button>
                             `).join('')}
@@ -226,6 +254,21 @@
                     </button>
                 </div>
             `;
+            
+            // Добавляем обработчики для кнопок размеров
+            const sizeBtns = document.querySelectorAll('.size-btn');
+            sizeBtns.forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    // Убираем active у всех
+                    sizeBtns.forEach(b => b.classList.remove('active'));
+                    // Добавляем active на нажатую
+                    this.classList.add('active');
+                    // Обновляем selectedSize
+                    selectedSize = this.textContent;
+                    console.log('Выбран размер:', selectedSize);
+                });
+            });
         }
         
         // Функции взаимодействия
@@ -236,14 +279,6 @@
             const thumbnails = document.querySelectorAll('.thumbnail');
             thumbnails.forEach((thumb, i) => {
                 thumb.classList.toggle('active', i === index);
-            });
-        };
-        
-        window.selectSize = function(size) {
-            selectedSize = size;
-            const sizeBtns = document.querySelectorAll('.size-btn');
-            sizeBtns.forEach(btn => {
-                btn.classList.toggle('active', btn.textContent === size);
             });
         };
         
