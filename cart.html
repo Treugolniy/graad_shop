@@ -95,13 +95,12 @@
             <p class="checkout-note">После оформления вы сможете прикрепить чек</p>
         </div>
 
-        <!-- Блок прикрепления чека (появляется после оформления заказа) -->
+        <!-- Блок прикрепления чека (появляется после оформления заказа) - всегда развернут -->
         <div class="receipt-section" id="receiptSection" style="display: none;">
             <div class="receipt-header">
                 <span>📎 ПРИКРЕПИТЬ ЧЕК</span>
-                <button class="receipt-toggle" id="receiptToggle">▼</button>
             </div>
-            <div class="receipt-body" id="receiptBody" style="display: none;">
+            <div class="receipt-body" id="receiptBody">
                 <p class="receipt-hint">После оплаты прикрепите фото или скриншот чека</p>
                 <div class="receipt-attach-area" id="receiptAttachArea">
                     <button type="button" class="attach-receipt-btn" id="attachReceiptBtn">📎 Выбрать файл</button>
@@ -121,6 +120,7 @@
         let tgUser = null;
         let tgUsername = 'Гость';
         let orderPlaced = false; // Флаг, что заказ оформлен
+        let isSendingReceipt = false; // Флаг для блокировки повторной отправки чека
         
         // Инициализация Telegram и получение username
         if (window.Telegram && window.Telegram.WebApp) {
@@ -373,19 +373,21 @@
             }
         }
         
-        // Раскрытие/скрытие блока чека
-        const receiptToggle = document.getElementById('receiptToggle');
-        const receiptBody = document.getElementById('receiptBody');
-        
-        receiptToggle?.addEventListener('click', () => {
-            if (receiptBody.style.display === 'none') {
-                receiptBody.style.display = 'block';
-                receiptToggle.textContent = '▲';
-            } else {
-                receiptBody.style.display = 'none';
-                receiptToggle.textContent = '▼';
+        function hideReceiptSection() {
+            const receiptSection = document.getElementById('receiptSection');
+            if (receiptSection) {
+                receiptSection.style.display = 'none';
             }
-        });
+            // Очищаем форму
+            selectedReceipt = null;
+            document.getElementById('receiptPreviewList').innerHTML = '';
+            const sendBtn = document.getElementById('sendReceiptBtn');
+            if (sendBtn) {
+                sendBtn.disabled = true;
+                sendBtn.textContent = 'ОТПРАВИТЬ ЧЕК';
+            }
+            isSendingReceipt = false;
+        }
         
         // Прикрепление файла
         const attachReceiptBtn = document.getElementById('attachReceiptBtn');
@@ -450,6 +452,12 @@
         // Отправка чека админу
         sendReceiptBtn?.addEventListener('click', async () => {
             if (!selectedReceipt) return;
+            if (isSendingReceipt) return; // Защита от повторной отправки
+            
+            isSendingReceipt = true;
+            const originalBtnText = sendReceiptBtn.textContent;
+            sendReceiptBtn.textContent = 'ОТПРАВЛЯЕМ...';
+            sendReceiptBtn.disabled = true;
             
             let userMention = '';
             let userId = '';
@@ -488,23 +496,27 @@
                     })
                 });
                 
-                selectedReceipt = null;
-                receiptPreviewList.innerHTML = '';
-                sendReceiptBtn.disabled = true;
-                
+                // Показываем попап об успехе
                 if (window.Telegram?.WebApp) {
                     window.Telegram.WebApp.showPopup({
                         title: '✅ Чек отправлен!',
                         message: 'Спасибо! Менеджер проверит оплату и свяжется с вами.',
                         buttons: [{type: 'ok'}]
+                    }, () => {
+                        // После закрытия попапа скрываем блок с чеком
+                        hideReceiptSection();
                     });
+                } else {
+                    alert('Чек отправлен!');
+                    hideReceiptSection();
                 }
-                
-                receiptBody.style.display = 'none';
-                receiptToggle.textContent = '▼';
                 
             } catch (error) {
                 console.error('Ошибка отправки чека:', error);
+                sendReceiptBtn.textContent = originalBtnText;
+                sendReceiptBtn.disabled = false;
+                isSendingReceipt = false;
+                
                 if (window.Telegram?.WebApp) {
                     window.Telegram.WebApp.showPopup({
                         title: '❌ Ошибка',
@@ -587,14 +599,14 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
     `📦 <b>Состав заказа:</b>\n${orderItems}\n\n` +
     `💰 <b>Сумма к оплате:</b> ${finalTotal.toLocaleString()} ₽\n\n` +
     `💳 <b>Реквизиты для оплаты:</b>\n` +
-    `📱 <b>Номер телефона (СБП):</b> <a href="tel:+79003550088">+7 900 355-00-88</a>\n` +
+    `📱 <b>Номер телефона (СБП):</b> <code><a href="tel:+79003550088" style="color: #2E9AFE; text-decoration: none;">+7 900 355-00-88</a></code>\n` +
     `👤 <b>Получатель:</b> АРСЕНИЙ М.\n` +
     `🏦 <b>Банк:</b> Альфа-Банк\n\n` +
     `📝 <b>Как оплатить:</b>\n` +
-    `1. Нажмите на номер телефона выше\n` +
-    `2. Выберите приложение для перевода (СБП)\n` +
-    `3. Введите сумму ${finalTotal.toLocaleString()} ₽\n` +
-    `4. Подтвердите перевод\n\n` +
+    `• Нажмите на <b><font color="#2E9AFE">синий номер телефона</font></b> выше\n` +
+    `• Выберите приложение для перевода (СБП)\n` +
+    `• Введите сумму ${finalTotal.toLocaleString()} ₽\n` +
+    `• Подтвердите перевод\n\n` +
     `📎 <b>После оплаты:</b>\n` +
     `• Вернитесь в корзину\n` +
     `• Прикрепите чек внизу страницы\n` +
@@ -697,13 +709,16 @@ const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
             justify-content: space-between;
             align-items: center;
             padding: 14px 16px;
-            cursor: pointer;
             font-size: 14px;
             letter-spacing: 1px;
             color: rgba(230, 230, 230, 0.8);
         }
         
-        .promo-toggle, .receipt-toggle {
+        .receipt-header {
+            cursor: default;
+        }
+        
+        .promo-toggle {
             background: none;
             border: none;
             color: #E6E6E6;
