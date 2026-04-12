@@ -8,7 +8,7 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <!-- Бургер-меню (тот же код, что и ранее) -->
+    <!-- Бургер-меню -->
     <div class="burger-menu" id="burgerMenu">
         <div class="burger-overlay" id="burgerOverlay"></div>
         <div class="burger-panel">
@@ -51,7 +51,7 @@
 
         <div class="user-info" id="userInfo">
             <div class="user-card">
-                <span class="user-label">Ваш ID:</span>
+                <span class="user-label">Ваш Username:</span>
                 <span class="user-value" id="usernameDisplay">Загрузка...</span>
             </div>
             <div class="discount-card" id="discountCard" style="display: none;">
@@ -80,7 +80,7 @@
         <div class="rules-area">
             <h3>Как получить скидку?</h3>
             <p>1. Крути колесо один раз — выпадет скидка от 0% до 20%</p>
-            <p>2. Скидка автоматически привязывается к вашему ID</p>
+            <p>2. Скидка автоматически привязывается к вашему Username</p>
             <p>3. При оформлении заказа введите промокод: <strong>GRAAD_ВАШ_USERNAME</strong></p>
             <p>4. Скидка действует только на первый заказ</p>
             <p class="warning">⚠️ Скидку можно получить только один раз!</p>
@@ -91,6 +91,7 @@
     <script src="config.js"></script>
     <script>
         let tgUser = null;
+        let currentUsername = '';
         let currentUserId = '';
         let currentDiscount = null;
         let hasSpun = false;
@@ -109,7 +110,7 @@
         let canvas = null;
         let ctx = null;
         
-        // Инициализация пользователя
+        // Инициализация пользователя и получение username
         if (window.Telegram && window.Telegram.WebApp) {
             const tg = window.Telegram.WebApp;
             tg.ready();
@@ -119,24 +120,40 @@
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 tgUser = tg.initDataUnsafe.user;
                 currentUserId = tgUser.id.toString();
-                document.getElementById('usernameDisplay').textContent = currentUserId;
-            } else {
-                let guestId = localStorage.getItem('guest_id');
-                if (!guestId) {
-                    guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-                    localStorage.setItem('guest_id', guestId);
+                
+                // Получаем username для привязки скидки
+                if (tgUser.username) {
+                    currentUsername = tgUser.username;
+                    document.getElementById('usernameDisplay').textContent = `@${currentUsername}`;
+                } else if (tgUser.first_name) {
+                    currentUsername = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim().toLowerCase().replace(/\s/g, '_');
+                    document.getElementById('usernameDisplay').textContent = currentUsername;
+                } else {
+                    currentUsername = `user_${currentUserId}`;
+                    document.getElementById('usernameDisplay').textContent = currentUsername;
                 }
-                currentUserId = guestId;
-                document.getElementById('usernameDisplay').textContent = currentUserId.substring(0, 20) + '...';
+                console.log('Пользователь:', currentUsername, 'ID:', currentUserId);
+            } else {
+                // Гость — генерируем уникальный username
+                let guestUsername = localStorage.getItem('guest_username');
+                if (!guestUsername) {
+                    guestUsername = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                    localStorage.setItem('guest_username', guestUsername);
+                }
+                currentUsername = guestUsername;
+                currentUserId = guestUsername;
+                document.getElementById('usernameDisplay').textContent = currentUsername.substring(0, 20) + '...';
             }
         } else {
-            let browserId = localStorage.getItem('browser_id');
-            if (!browserId) {
-                browserId = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-                localStorage.setItem('browser_id', browserId);
+            // Для обычного браузера
+            let browserUsername = localStorage.getItem('browser_username');
+            if (!browserUsername) {
+                browserUsername = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+                localStorage.setItem('browser_username', browserUsername);
             }
-            currentUserId = browserId;
-            document.getElementById('usernameDisplay').textContent = currentUserId.substring(0, 20) + '...';
+            currentUsername = browserUsername;
+            currentUserId = browserUsername;
+            document.getElementById('usernameDisplay').textContent = currentUsername.substring(0, 20) + '...';
         }
         
         // Бургер-меню
@@ -238,13 +255,9 @@
             ctx.fill();
         }
         
-        // Получение скидки по углу остановки (стрелка сверху)
+        // Получение скидки по углу остановки
         function getDiscountAtAngle(finalAngle) {
-            // Стрелка у нас сверху (12 часов)
-            // При вращении колеса мы смотрим, какой сектор оказался вверху
             let pointerAngle = (360 - (finalAngle % 360)) % 360;
-            
-            // Смещаем на 90°, потому что в canvas угол 0° — это 3 часа (право)
             let adjustedAngle = (pointerAngle + 90) % 360;
             
             console.log(`Угол остановки: ${finalAngle}° → откорректированный: ${adjustedAngle}°`);
@@ -260,9 +273,10 @@
             return SEGMENTS[0];
         }
         
-        // Сохранение скидки
+        // Сохранение скидки (привязка к username)
         async function saveDiscountResult(discount) {
             const discountData = {
+                username: currentUsername,
                 userId: currentUserId,
                 discount: discount,
                 timestamp: Date.now(),
@@ -275,14 +289,15 @@
                 existingDiscounts = JSON.parse(saved);
             }
             
-            const existingIndex = existingDiscounts.findIndex(d => d.userId === currentUserId);
+            // Проверяем по username (уникальный идентификатор)
+            const existingIndex = existingDiscounts.findIndex(d => d.username === currentUsername);
             if (existingIndex === -1) {
                 existingDiscounts.push(discountData);
                 localStorage.setItem('grad_discounts', JSON.stringify(existingDiscounts));
             }
             
-            const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
-            const message = `🎁 ПОЛУЧЕНА СКИДКА!\n\n👤 Пользователь: ${username || currentUserId}\n🆔 ID: ${currentUserId}\n🏷️ Скидка: ${discount}%\n📝 Промокод: GRAAD_${currentUserId}\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            const displayName = tgUser?.username ? `@${tgUser.username}` : (tgUser?.first_name || currentUsername);
+            const message = `🎁 ПОЛУЧЕНА СКИДКА!\n\n👤 Пользователь: ${displayName}\n🆔 Username: ${currentUsername}\n🏷️ Скидка: ${discount}%\n📝 Промокод: GRAAD_${currentUsername}\n⏰ ${new Date().toLocaleString('ru-RU')}`;
             
             try {
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -301,12 +316,12 @@
             hasSpun = true;
         }
         
-        // Проверка существующей скидки
+        // Проверка существующей скидки (по username)
         function checkExistingDiscount() {
             const saved = localStorage.getItem('grad_discounts');
             if (saved) {
                 const discounts = JSON.parse(saved);
-                const existing = discounts.find(d => d.userId === currentUserId);
+                const existing = discounts.find(d => d.username === currentUsername);
                 if (existing) {
                     currentDiscount = existing.discount;
                     hasSpun = true;
@@ -319,7 +334,7 @@
         
         function showExistingDiscount(discount) {
             document.getElementById('discountValue').textContent = `${discount}%`;
-            document.getElementById('promoCode').textContent = `GRAAD_${currentUserId}`;
+            document.getElementById('promoCode').textContent = `GRAAD_${currentUsername}`;
             document.getElementById('discountCard').style.display = 'flex';
             document.getElementById('promoCodeBlock').style.display = 'flex';
             
@@ -330,12 +345,12 @@
             
             document.getElementById('resultArea').style.display = 'block';
             document.getElementById('resultTitle').textContent = '🎉 У вас уже есть скидка!';
-            document.getElementById('resultMessage').innerHTML = `Ваша скидка: ${discount}%<br>Промокод: <strong>GRAAD_${currentUserId}</strong>`;
+            document.getElementById('resultMessage').innerHTML = `Ваша скидка: ${discount}%<br>Промокод: <strong>GRAAD_${currentUsername}</strong>`;
         }
         
         function showResult(discount) {
             document.getElementById('discountValue').textContent = `${discount.value}%`;
-            document.getElementById('promoCode').textContent = `GRAAD_${currentUserId}`;
+            document.getElementById('promoCode').textContent = `GRAAD_${currentUsername}`;
             document.getElementById('discountCard').style.display = 'flex';
             document.getElementById('promoCodeBlock').style.display = 'flex';
             document.getElementById('resultArea').style.display = 'block';
@@ -345,7 +360,7 @@
                 document.getElementById('resultMessage').innerHTML = 'Вам выпала скидка 0%... Но вы можете подписаться на наш канал, чтобы не пропустить акции!';
             } else {
                 document.getElementById('resultTitle').textContent = '🎉 Поздравляем!';
-                document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Промокод: <strong>GRAAD_${currentUserId}</strong><br>Введите его при оформлении заказа.`;
+                document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Промокод: <strong>GRAAD_${currentUsername}</strong><br>Введите его при оформлении заказа.`;
             }
             
             const spinBtn = document.getElementById('spinBtn');
@@ -373,7 +388,6 @@
             spinBtn.disabled = true;
             spinBtn.style.opacity = '0.6';
             
-            // Генерируем случайный угол остановки
             const targetFinalAngle = Math.random() * 360;
             const fullRotations = 8 + Math.random() * 5;
             const startAngle = currentAngle;
