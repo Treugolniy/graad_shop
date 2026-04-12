@@ -1,54 +1,77 @@
-// data.js - ТВОИ ТОВАРЫ (редактируй здесь)
+// data.js - ТВОИ ТОВАРЫ
 
 const products = [
     {
         id: 1,
-        name: "Футболка Classic",
-        price: 1500,
-        description: "Удобная хлопковая футболка. Подходит для повседневной носки.",
-        images: [
-            "https://placehold.co/600x400/1e90ff/white?text=Футболка+1",
-            "https://placehold.co/600x400/4169e1/white?text=Футболка+2",
-            "https://placehold.co/600x400/0000cd/white?text=Футболка+3"
-        ],
-        sizes: ["XS", "S", "M", "L", "XL"],
+        name: "Футболка BRYANSK белая",
+        price: 1980,
+        oldPrice: 1980,
+        discount: 0,
+        sale: false,
+        description: "Переосмысление городского стиля в духе университетских лиг. Эта футболка — база, которая заявляет о ваших корнях, сочетая премиальный комфорт и эстетику «старой школы».\n\n• Материал: 100% плотный хлопок (240 г/м²) — держит форму и не просвечивает.\n\n• Крой: Базовый, свободная посадка и идеальный силуэт.\n\n• Принт: Износостойкая винтажная графика в стиле Varsity.\n\n• Детали: Усиленная горловина и швы для долгой службы.",
+        images: ["photos/white_t-shirt.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
         category: "одежда"
     },
     {
         id: 2,
-        name: "Кепка Street",
-        price: 890,
-        description: "Стильная кепка с регулировкой. Отличный аксессуар для города.",
-        images: [
-            "https://placehold.co/600x400/32cd32/white?text=Кепка+1",
-            "https://placehold.co/600x400/228b22/white?text=Кепка+2"
-        ],
-        sizes: ["S", "M", "L"],
-        category: "аксессуары"
+        name: "Футболка BRYANSK бордовая",
+        price: 1980,
+        oldPrice: 1980,
+        discount: 0,
+        sale: false,
+        description: "Переосмысление городского стиля в духе университетских лиг. Эта футболка — база, которая заявляет о ваших корнях, сочетая премиальный комфорт и эстетику «старой школы».\n\n• Материал: 100% плотный хлопок (240 г/м²) — держит форму и не просвечивает.\n\n• Крой: Базовый, свободная посадка и идеальный силуэт.\n\n• Принт: Износостойкая винтажная графика в стиле Varsity.\n\n• Детали: Усиленная горловина и швы для долгой службы.",
+        images: ["photos/red_t-shirt.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
+        category: "одежда"
     },
     {
         id: 3,
-        name: "Толстовка Hoodie",
-        price: 3500,
-        description: "Тёплая толстовка с капюшоном. Идеально для прохладной погоды.",
-        images: [
-            "https://placehold.co/600x400/ff6347/white?text=Худи+1",
-            "https://placehold.co/600x400/ff4500/white?text=Худи+2"
-        ],
-        sizes: ["S", "M", "L", "XL"],
+        name: "Футболка BRYANSK черная",
+        price: 1980,
+        oldPrice: 1980,
+        discount: 0,
+        sale: false,
+        description: "Переосмысление городского стиля в духе университетских лиг. Эта футболка — база, которая заявляет о ваших корнях, сочетая премиальный комфорт и эстетику «старой школы».\n\n• Материал: 100% плотный хлопок (240 г/м²) — держит форму и не просвечивает.\n\n• Крой: Базовый, свободная посадка и идеальный силуэт.\n\n• Принт: Износостойкая винтажная графика в стиле Varsity.\n\n• Детали: Усиленная горловина и швы для долгой службы.",
+        images: ["photos/black_t-shirt.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
         category: "одежда"
     },
     {
         id: 4,
-        name: "Шоппер сумка",
-        price: 550,
-        description: "Экологичная сумка для покупок. Вместительная и прочная.",
-        images: [
-            "https://placehold.co/600x400/daa520/white?text=Сумка+1",
-            "https://placehold.co/600x400/b8860b/white?text=Сумка+2"
-        ],
-        sizes: ["One size"],
-        category: "аксессуары"
+        name: "Рубашка-поло 32 белая",
+        price: 2170,
+        oldPrice: 2170,
+        discount: 0,
+        sale: false,
+        description: "Премиальное поло, в котором уличный характер встречается с классическим силуэтом. Идеальный выбор для тех, кто ценит лаконичность и статус в деталях.\n\n• Материал: 100% органический хлопок «пике» — фактурная ткань, которая отлично дышит.\n\n• Крой: Classic Fit — выверенная посадка, подчеркивающая силуэт.\n\n• Детали: Контрастный логотип и аккуратный воротник на пуговицах.\n\n• Стиль: Casual / Minimal — от офиса до вечерней прогулки по городу.",
+        images: ["photos/white_polo.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
+        category: "одежда"
+    },
+    {
+        id: 5,
+        name: "Рубашка-поло 32 черная",
+        price: 2170,
+        oldPrice: 2170,
+        discount: 0,
+        sale: false,
+        description: "Премиальное поло, в котором уличный характер встречается с классическим силуэтом. Идеальный выбор для тех, кто ценит лаконичность и статус в деталях.\n\n• Материал: 100% органический хлопок «пике» — фактурная ткань, которая отлично дышит.\n\n• Крой: Classic Fit — выверенная посадка, подчеркивающая силуэт.\n\n• Детали: Контрастный логотип и аккуратный воротник на пуговицах.\n\n• Стиль: Casual / Minimal — от офиса до вечерней прогулки по городу.",
+        images: ["photos/black_polo.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
+        category: "одежда"
+    },
+    {
+        id: 6,
+        name: "Футболка «Александр Пересвет»",
+        price: 1980,
+        oldPrice: 1980,
+        discount: 0,
+        sale: false,
+        description: "Уличная эстетика, вдохновленная историческим подвигом. Плотный хлопок и винтажная графика, рассказывающая историю великого воина.\n\n• Материал: 100% плотный хлопок (240 г/м²) — отлично держит форму и долговечен.\n\n• Крой: Базовый, свободная посадка для максимального комфорта и стиля.\n\n• Принт: Износостойкий винтажный принт с изображением Александра Пересвета.\n\n• Детали: Усиленная горловина и швы для длительной носки.",
+        images: ["photos/peresvet_t-shirt.png"],
+        sizes: ["XS", "S", "M", "L", "XL", "2XL"],
+        category: "одежда"
     }
 ];
 
@@ -70,14 +93,16 @@ function addToCart(productId, size, quantity = 1) {
         existingItem.quantity += quantity;
     } else {
         const product = products.find(p => p.id === productId);
-        cart.push({
-            id: productId,
-            name: product.name,
-            price: product.price,
-            size: size,
-            quantity: quantity,
-            image: product.images[0]
-        });
+        if (product) {
+            cart.push({
+                id: productId,
+                name: product.name,
+                price: product.price,
+                size: size,
+                quantity: quantity,
+                image: product.images[0]
+            });
+        }
     }
     
     saveCart(cart);
@@ -130,7 +155,6 @@ function initTelegram() {
         tg.expand();
         tg.enableClosingConfirmation();
         
-        // Меняем цвет кнопки "Назад" в теме Telegram
         const backButton = tg.BackButton;
         if (backButton) {
             backButton.onClick(() => {
