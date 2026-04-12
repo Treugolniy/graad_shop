@@ -92,7 +92,25 @@
             <button class="btn-checkout" id="checkout-btn">
                 ОФОРМИТЬ ЗАКАЗ
             </button>
-            <p class="checkout-note">После оформления вы получите реквизиты для оплаты</p>
+            <p class="checkout-note">После оформления вы сможете прикрепить чек</p>
+        </div>
+
+        <!-- Блок прикрепления чека (появляется после оформления заказа) -->
+        <div class="receipt-section" id="receiptSection" style="display: none;">
+            <div class="receipt-header">
+                <span>📎 ПРИКРЕПИТЬ ЧЕК</span>
+                <button class="receipt-toggle" id="receiptToggle">▼</button>
+            </div>
+            <div class="receipt-body" id="receiptBody" style="display: none;">
+                <p class="receipt-hint">После оплаты прикрепите фото или скриншот чека</p>
+                <div class="receipt-attach-area" id="receiptAttachArea">
+                    <button type="button" class="attach-receipt-btn" id="attachReceiptBtn">📎 Выбрать файл</button>
+                    <div class="receipt-preview-list" id="receiptPreviewList"></div>
+                </div>
+                <input type="file" id="receiptFileInput" accept="image/*,application/pdf" style="display: none;">
+                <button class="send-receipt-btn" id="sendReceiptBtn" disabled>ОТПРАВИТЬ ЧЕК</button>
+                <p class="receipt-note">Поддерживаются фото и PDF до 5 МБ</p>
+            </div>
         </div>
     </div>
 
@@ -102,6 +120,7 @@
         // Получение информации о пользователе из Telegram
         let tgUser = null;
         let tgUsername = 'Гость';
+        let orderPlaced = false; // Флаг, что заказ оформлен
         
         // Инициализация Telegram и получение username
         if (window.Telegram && window.Telegram.WebApp) {
@@ -128,7 +147,7 @@
         let appliedPromoCode = null;
         let currentUserId = null;
         
-        // Получение ID пользователя (для гостей и привязки скидки)
+        // Получение ID пользователя
         function getUserId() {
             if (tgUser && tgUser.id) {
                 return tgUser.id.toString();
@@ -209,7 +228,6 @@
             const discounts = JSON.parse(savedDiscounts);
             const discountEntry = discounts.find(d => 
                 d.username === codeValue || 
-                d.username === currentUsername ||
                 d.userId === currentUserId
             );
             
@@ -276,7 +294,7 @@
             const emptyCartDiv = document.getElementById('empty-cart');
             const summaryDiv = document.getElementById('cart-summary');
             
-            if (cart.length === 0) {
+            if (cart.length === 0 && !orderPlaced) {
                 cartItemsDiv.style.display = 'none';
                 emptyCartDiv.style.display = 'flex';
                 summaryDiv.style.display = 'none';
@@ -343,80 +361,161 @@
             removeFromCart(id, size);
         }
         
-        // Бургер-меню
-        const burgerBtn = document.getElementById('burgerBtn');
-        const burgerMenu = document.getElementById('burgerMenu');
-        const burgerOverlay = document.getElementById('burgerOverlay');
-        const burgerClose = document.getElementById('burgerClose');
+        // ========== РАБОТА С ЧЕКОМ ==========
+        let selectedReceipt = null;
         
-        function openBurger() {
-            burgerMenu.classList.add('open');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeBurger() {
-            burgerMenu.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-        
-        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
-        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
-        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
-        
-        // Telegram инициализация
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            tg.enableClosingConfirmation();
-            
-            const backButton = tg.BackButton;
-            if (backButton) {
-                backButton.onClick(() => {
-                    window.history.back();
-                });
+        function showReceiptSection() {
+            const receiptSection = document.getElementById('receiptSection');
+            if (receiptSection) {
+                receiptSection.style.display = 'block';
+                // Прокручиваем к блоку с чеком
+                receiptSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         }
         
-        // Обработчики кнопок
-        document.getElementById('cartBtn')?.addEventListener('click', () => {
-            renderCart();
-        });
+        // Раскрытие/скрытие блока чека
+        const receiptToggle = document.getElementById('receiptToggle');
+        const receiptBody = document.getElementById('receiptBody');
         
-        document.getElementById('logoBtn')?.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-        
-        // Промокод: раскрытие/скрытие
-        const promoToggle = document.getElementById('promoToggle');
-        const promoBody = document.getElementById('promoBody');
-        
-        promoToggle?.addEventListener('click', () => {
-            if (promoBody.style.display === 'none') {
-                promoBody.style.display = 'block';
-                promoToggle.textContent = '▲';
+        receiptToggle?.addEventListener('click', () => {
+            if (receiptBody.style.display === 'none') {
+                receiptBody.style.display = 'block';
+                receiptToggle.textContent = '▲';
             } else {
-                promoBody.style.display = 'none';
-                promoToggle.textContent = '▼';
+                receiptBody.style.display = 'none';
+                receiptToggle.textContent = '▼';
             }
         });
         
-        // Применение промокода
-        document.getElementById('applyPromoBtn')?.addEventListener('click', () => {
-            const promoInput = document.getElementById('promoInput');
-            const promoCode = promoInput.value.trim().toUpperCase();
+        // Прикрепление файла
+        const attachReceiptBtn = document.getElementById('attachReceiptBtn');
+        const receiptFileInput = document.getElementById('receiptFileInput');
+        const receiptPreviewList = document.getElementById('receiptPreviewList');
+        const sendReceiptBtn = document.getElementById('sendReceiptBtn');
+        
+        attachReceiptBtn?.addEventListener('click', () => {
+            receiptFileInput.click();
+        });
+        
+        receiptFileInput?.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
             
-            if (!promoCode) {
-                const promoMessage = document.getElementById('promoMessage');
-                promoMessage.textContent = 'Введите промокод';
-                promoMessage.style.color = '#ff3b30';
+            if (file.size > 5 * 1024 * 1024) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Ошибка',
+                        message: 'Файл слишком большой. Максимум 5 МБ.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
                 return;
             }
             
-            applyPromoCode(promoCode);
+            selectedReceipt = file;
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    receiptPreviewList.innerHTML = `
+                        <div class="receipt-preview">
+                            <img src="${event.target.result}" alt="чек">
+                            <button class="remove-receipt" id="removeReceiptBtn">✕</button>
+                        </div>
+                    `;
+                    document.getElementById('removeReceiptBtn')?.addEventListener('click', () => {
+                        selectedReceipt = null;
+                        receiptPreviewList.innerHTML = '';
+                        sendReceiptBtn.disabled = true;
+                    });
+                };
+                reader.readAsDataURL(file);
+            } else {
+                receiptPreviewList.innerHTML = `
+                    <div class="receipt-preview receipt-preview-pdf">
+                        📄 ${file.name.substring(0, 20)}
+                        <button class="remove-receipt" id="removeReceiptBtn">✕</button>
+                    </div>
+                `;
+                document.getElementById('removeReceiptBtn')?.addEventListener('click', () => {
+                    selectedReceipt = null;
+                    receiptPreviewList.innerHTML = '';
+                    sendReceiptBtn.disabled = true;
+                });
+            }
+            
+            sendReceiptBtn.disabled = false;
         });
         
-        // Кнопка оформления заказа
+        // Отправка чека админу
+        sendReceiptBtn?.addEventListener('click', async () => {
+            if (!selectedReceipt) return;
+            
+            let userMention = '';
+            let userId = '';
+            
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const user = tg.initDataUnsafe.user;
+                    userId = user.id;
+                    if (user.username) {
+                        userMention = `@${user.username}`;
+                    } else {
+                        userMention = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                    }
+                }
+            }
+            
+            const formData = new FormData();
+            formData.append('chat_id', ADMIN_CHAT_ID);
+            formData.append('document', selectedReceipt);
+            formData.append('caption', `📎 ЧЕК ОТ ПОКУПАТЕЛЯ\n\n👤 Пользователь: ${userMention || 'Не указан'}\n🆔 ID: ${userId || 'неизвестно'}\n⏰ ${new Date().toLocaleString('ru-RU')}`);
+            
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: ADMIN_CHAT_ID,
+                        text: `📎 Получен чек от ${userMention || userId}`,
+                        parse_mode: 'HTML'
+                    })
+                });
+                
+                selectedReceipt = null;
+                receiptPreviewList.innerHTML = '';
+                sendReceiptBtn.disabled = true;
+                
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '✅ Чек отправлен!',
+                        message: 'Спасибо! Менеджер проверит оплату и свяжется с вами.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+                
+                receiptBody.style.display = 'none';
+                receiptToggle.textContent = '▼';
+                
+            } catch (error) {
+                console.error('Ошибка отправки чека:', error);
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: '❌ Ошибка',
+                        message: 'Не удалось отправить чек. Попробуйте позже.',
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+            }
+        });
+        
+        // ========== ОФОРМЛЕНИЕ ЗАКАЗА ==========
         document.getElementById('checkout-btn')?.addEventListener('click', async () => {
             const cart = getCart();
             if (cart.length === 0) return;
@@ -440,12 +539,11 @@
                 }
             }
             
-            // Формируем сумму
             const subtotal = getCartTotal();
             const discountAmount = Math.round(subtotal * currentDiscount / 100);
             const finalTotal = subtotal - discountAmount;
             
-            // Формируем сообщение с заказом для админа
+            // Сообщение для админа
             let adminMessage = `🧾 НОВЫЙ ЗАКАЗ\n\n`;
             adminMessage += `👤 Покупатель: ${userMention || 'Не указан'}\n`;
             if (userTelegramId) {
@@ -467,7 +565,7 @@
             adminMessage += `💎 Итого: ${finalTotal.toLocaleString()} ₽\n`;
             adminMessage += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
             
-            // Отправляем заказ админу в Telegram
+            // Отправляем заказ админу
             try {
                 await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
                     method: 'POST',
@@ -482,24 +580,23 @@
                 console.error('Ошибка отправки админу:', error);
             }
             
-            // Текст для клиента с реквизитами для оплаты
+            // Сообщение для клиента с реквизитами
             const orderItems = cart.map(item => `  • ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽`).join('\n');
             
             const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
                 `📦 <b>Состав заказа:</b>\n${orderItems}\n\n` +
                 `💰 <b>Сумма к оплате:</b> ${finalTotal.toLocaleString()} ₽\n\n` +
                 `💳 <b>Реквизиты для оплаты:</b>\n` +
-                `Номер телефона: <b>89003550088</b>\n` +
-                `Получатель: <b>Арсений М.</b>\n` +
+                `Карта: <b>2200 1234 5678 9012</b>\n` +
+                `Получатель: <b>ИВАН ИВАНОВ</b>\n` +
                 `Банк: <b>Альфа-Банк</b>\n\n` +
                 `📝 <b>После оплаты:</b>\n` +
-                `1. Отправьте чек в этот чат\n` +
-                `2. Менеджер свяжется с вами в течение 15 минут\n` +
-                `3. Подтвердит доставку\n\n` +
+                `1. Вернитесь в корзину\n` +
+                `2. Прикрепите чек внизу страницы\n` +
+                `3. Менеджер проверит оплату и свяжется с вами\n\n` +
                 `⚠️ Чек действителен 24 часа.\n\n` +
                 `<i>Если у вас возникли вопросы, напишите @grad_support</i>`;
             
-            // Отправляем клиенту сообщение с реквизитами
             if (userTelegramId) {
                 try {
                     await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -516,23 +613,59 @@
                 }
             }
             
-            // Показываем попап с подтверждением
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: '✅ Заказ оформлен!',
-                    message: 'Проверьте сообщение от бота — там реквизиты для оплаты.',
-                    buttons: [{type: 'ok'}]
-                });
-            } else {
-                alert('Заказ оформлен! Проверьте сообщение от бота.');
-            }
-            
             // Очищаем корзину
             localStorage.setItem('cart', JSON.stringify([]));
             currentDiscount = 0;
             appliedPromoCode = null;
             renderCart();
             updateCartCounter();
+            
+            // Устанавливаем флаг, что заказ оформлен
+            orderPlaced = true;
+            
+            // Показываем попап
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showPopup({
+                    title: '✅ Заказ оформлен!',
+                    message: 'Проверьте сообщение от бота с реквизитами. После оплаты прикрепите чек ниже.',
+                    buttons: [{type: 'ok'}]
+                }, () => {
+                    // После закрытия попапа показываем блок с чеком
+                    showReceiptSection();
+                });
+            } else {
+                alert('Заказ оформлен! Проверьте сообщение от бота.');
+                showReceiptSection();
+            }
+        });
+        
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        // Обработчики кнопок
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            renderCart();
+        });
+        
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
         });
         
         // Запуск
@@ -546,15 +679,15 @@
     </script>
     
     <style>
-        /* Дополнительные стили для промокода */
-        .promo-section {
+        /* Дополнительные стили для промокода и чека */
+        .promo-section, .receipt-section {
             background: rgba(255, 255, 255, 0.05);
             border-radius: 16px;
             margin-bottom: 20px;
             overflow: hidden;
         }
         
-        .promo-header {
+        .promo-header, .receipt-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -565,7 +698,7 @@
             color: rgba(230, 230, 230, 0.8);
         }
         
-        .promo-toggle {
+        .promo-toggle, .receipt-toggle {
             background: none;
             border: none;
             color: #E6E6E6;
@@ -573,11 +706,11 @@
             cursor: pointer;
         }
         
-        .promo-body {
+        .promo-body, .receipt-body {
             padding: 0 16px 16px 16px;
         }
         
-        .promo-hint {
+        .promo-hint, .receipt-hint {
             font-size: 12px;
             color: rgba(230, 230, 230, 0.5);
             margin-bottom: 12px;
@@ -626,6 +759,108 @@
             text-align: center;
         }
         
+        .receipt-attach-area {
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .attach-receipt-btn {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px dashed rgba(230, 230, 230, 0.3);
+            border-radius: 12px;
+            color: rgba(230, 230, 230, 0.7);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .attach-receipt-btn:active {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .receipt-preview-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .receipt-preview {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .receipt-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .receipt-preview-pdf {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #8A1538;
+            color: #E6E6E6;
+            font-size: 12px;
+        }
+        
+        .remove-receipt {
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 20px;
+            height: 20px;
+            background: #8A1538;
+            border: none;
+            border-radius: 50%;
+            color: #E6E6E6;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .send-receipt-btn {
+            width: 100%;
+            padding: 14px;
+            background: #8A1538;
+            border: none;
+            border-radius: 60px;
+            color: #E6E6E6;
+            font-size: 16px;
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .send-receipt-btn:active {
+            transform: scale(0.97);
+            background: #6d0f2c;
+        }
+        
+        .send-receipt-btn:disabled {
+            opacity: 0.5;
+            transform: none;
+        }
+        
+        .receipt-note {
+            font-size: 10px;
+            color: rgba(230, 230, 230, 0.3);
+            margin-top: 8px;
+            text-align: center;
+        }
+        
         .btn-checkout {
             margin-top: 20px;
         }
@@ -640,7 +875,6 @@
             .promo-input-group {
                 flex-direction: column;
             }
-            
             .promo-apply {
                 padding: 10px;
             }
