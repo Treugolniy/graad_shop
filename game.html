@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GRAAD | Колесо фортуны</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Бургер-меню (тот же код, что и ранее) -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="glass-header">
+        <div class="header-left">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
+        </div>
+        <div class="header-right">
+            <button class="icon-btn" id="cartBtn">
+                <img src="cart.svg" alt="Корзина">
+                <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
+            </button>
+        </div>
+    </header>
+
+    <div class="game-container">
+        <div class="game-header">
+            <h1>КОЛЕСО ФОРТУНЫ</h1>
+            <p class="game-subtitle">Крути колесо и получи скидку на первый заказ!</p>
+        </div>
+
+        <div class="user-info" id="userInfo">
+            <div class="user-card">
+                <span class="user-label">Ваш ID:</span>
+                <span class="user-value" id="usernameDisplay">Загрузка...</span>
+            </div>
+            <div class="discount-card" id="discountCard" style="display: none;">
+                <span class="discount-label">Ваша скидка:</span>
+                <span class="discount-value" id="discountValue">-</span>
+                <div class="promo-code-block" id="promoCodeBlock" style="display: none;">
+                    <span class="promo-label">Промокод:</span>
+                    <span class="promo-code" id="promoCode">-</span>
+                    <button class="copy-btn" id="copyBtn">Копировать</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
+            <button class="spin-btn" id="spinBtn">КРУТИТЬ!</button>
+        </div>
+
+        <div class="result-area" id="resultArea" style="display: none;">
+            <div class="result-card">
+                <h3 id="resultTitle"></h3>
+                <p id="resultMessage"></p>
+            </div>
+        </div>
+
+        <div class="rules-area">
+            <h3>Как получить скидку?</h3>
+            <p>1. Крути колесо один раз — выпадет скидка от 0% до 20%</p>
+            <p>2. Скидка автоматически привязывается к вашему ID</p>
+            <p>3. При оформлении заказа введите промокод: <strong>GRAAD_ВАШ_USERNAME</strong></p>
+            <p>4. Скидка действует только на первый заказ</p>
+            <p class="warning">⚠️ Скидку можно получить только один раз!</p>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="config.js"></script>
+    <script>
+        let tgUser = null;
+        let currentUserId = '';
+        let currentDiscount = null;
+        let hasSpun = false;
+        
+        const SEGMENTS = [
+            { name: '0%', value: 0, color: '#555555', probability: 15 },
+            { name: '5%', value: 5, color: '#8A1538', probability: 35 },
+            { name: '10%', value: 10, color: '#6B0F2C', probability: 25 },
+            { name: '15%', value: 15, color: '#8A1538', probability: 15 },
+            { name: '20%', value: 20, color: '#4A0A1C', probability: 10 }
+        ];
+        
+        let segmentsWithAngles = [];
+        let currentAngle = 0;
+        let isSpinning = false;
+        let canvas = null;
+        let ctx = null;
+        
+        // Инициализация пользователя
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                tgUser = tg.initDataUnsafe.user;
+                currentUserId = tgUser.id.toString();
+                document.getElementById('usernameDisplay').textContent = currentUserId;
+            } else {
+                let guestId = localStorage.getItem('guest_id');
+                if (!guestId) {
+                    guestId = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+                    localStorage.setItem('guest_id', guestId);
+                }
+                currentUserId = guestId;
+                document.getElementById('usernameDisplay').textContent = currentUserId.substring(0, 20) + '...';
+            }
+        } else {
+            let browserId = localStorage.getItem('browser_id');
+            if (!browserId) {
+                browserId = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+                localStorage.setItem('browser_id', browserId);
+            }
+            currentUserId = browserId;
+            document.getElementById('usernameDisplay').textContent = currentUserId.substring(0, 20) + '...';
+        }
+        
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        // Инициализация сегментов
+        function initSegments() {
+            let startAngle = 0;
+            segmentsWithAngles = [];
+            
+            for (const segment of SEGMENTS) {
+                const angle = (segment.probability / 100) * 360;
+                segmentsWithAngles.push({
+                    ...segment,
+                    startAngle: startAngle,
+                    endAngle: startAngle + angle,
+                    angle: angle
+                });
+                startAngle += angle;
+            }
+            console.log('Сегменты:', segmentsWithAngles);
+        }
+        
+        // Отрисовка колеса
+        function drawWheel() {
+            if (!canvas || !ctx) return;
+            
+            const size = canvas.width;
+            const centerX = size / 2;
+            const centerY = size / 2;
+            const radius = size * 0.42;
+            
+            ctx.clearRect(0, 0, size, size);
+            
+            for (const segment of segmentsWithAngles) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                const startRad = (segment.startAngle + currentAngle) * Math.PI / 180;
+                const endRad = (segment.endAngle + currentAngle) * Math.PI / 180;
+                ctx.arc(centerX, centerY, radius, startRad, endRad);
+                ctx.closePath();
+                
+                ctx.fillStyle = segment.color;
+                ctx.fill();
+                ctx.strokeStyle = '#E6E6E6';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate((segment.startAngle + segment.endAngle + currentAngle * 2) / 2 * Math.PI / 180);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#E6E6E6';
+                ctx.font = `bold ${Math.max(14, Math.floor(size / 25))}px "Bebas Neue Cyrillic", "Bebas Neue", sans-serif`;
+                ctx.fillText(segment.name, radius * 0.65, 0);
+                ctx.restore();
+            }
+            
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
+            ctx.fillStyle = '#8A1538';
+            ctx.fill();
+            ctx.strokeStyle = '#E6E6E6';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            
+            // Стрелка сверху
+            ctx.beginPath();
+            ctx.moveTo(centerX - 12, 15);
+            ctx.lineTo(centerX, 3);
+            ctx.lineTo(centerX + 12, 15);
+            ctx.fillStyle = '#E6E6E6';
+            ctx.fill();
+        }
+        
+        // Получение скидки по углу остановки (стрелка сверху)
+        function getDiscountAtAngle(finalAngle) {
+            // Стрелка у нас сверху (12 часов)
+            // При вращении колеса мы смотрим, какой сектор оказался вверху
+            let pointerAngle = (360 - (finalAngle % 360)) % 360;
+            
+            // Смещаем на 90°, потому что в canvas угол 0° — это 3 часа (право)
+            let adjustedAngle = (pointerAngle + 90) % 360;
+            
+            console.log(`Угол остановки: ${finalAngle}° → откорректированный: ${adjustedAngle}°`);
+            
+            for (const segment of segmentsWithAngles) {
+                if (adjustedAngle >= segment.startAngle && adjustedAngle < segment.endAngle) {
+                    console.log(`Попадание в сектор: ${segment.name}`);
+                    return segment;
+                }
+            }
+            
+            console.warn('Сектор не найден, возвращаем 0%');
+            return SEGMENTS[0];
+        }
+        
+        // Сохранение скидки
+        async function saveDiscountResult(discount) {
+            const discountData = {
+                userId: currentUserId,
+                discount: discount,
+                timestamp: Date.now(),
+                date: new Date().toLocaleString('ru-RU')
+            };
+            
+            let existingDiscounts = [];
+            const saved = localStorage.getItem('grad_discounts');
+            if (saved) {
+                existingDiscounts = JSON.parse(saved);
+            }
+            
+            const existingIndex = existingDiscounts.findIndex(d => d.userId === currentUserId);
+            if (existingIndex === -1) {
+                existingDiscounts.push(discountData);
+                localStorage.setItem('grad_discounts', JSON.stringify(existingDiscounts));
+            }
+            
+            const username = tgUser ? (tgUser.username ? `@${tgUser.username}` : `${tgUser.first_name} ${tgUser.last_name || ''}`.trim()) : 'Гость';
+            const message = `🎁 ПОЛУЧЕНА СКИДКА!\n\n👤 Пользователь: ${username || currentUserId}\n🆔 ID: ${currentUserId}\n🏷️ Скидка: ${discount}%\n📝 Промокод: GRAAD_${currentUserId}\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: ADMIN_CHAT_ID,
+                        text: message,
+                        parse_mode: 'HTML'
+                    })
+                });
+            } catch (error) {
+                console.error('Ошибка отправки в Telegram:', error);
+            }
+            
+            hasSpun = true;
+        }
+        
+        // Проверка существующей скидки
+        function checkExistingDiscount() {
+            const saved = localStorage.getItem('grad_discounts');
+            if (saved) {
+                const discounts = JSON.parse(saved);
+                const existing = discounts.find(d => d.userId === currentUserId);
+                if (existing) {
+                    currentDiscount = existing.discount;
+                    hasSpun = true;
+                    showExistingDiscount(currentDiscount);
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function showExistingDiscount(discount) {
+            document.getElementById('discountValue').textContent = `${discount}%`;
+            document.getElementById('promoCode').textContent = `GRAAD_${currentUserId}`;
+            document.getElementById('discountCard').style.display = 'flex';
+            document.getElementById('promoCodeBlock').style.display = 'flex';
+            
+            const spinBtn = document.getElementById('spinBtn');
+            spinBtn.disabled = true;
+            spinBtn.style.opacity = '0.5';
+            spinBtn.textContent = 'СКИДКА ПОЛУЧЕНА';
+            
+            document.getElementById('resultArea').style.display = 'block';
+            document.getElementById('resultTitle').textContent = '🎉 У вас уже есть скидка!';
+            document.getElementById('resultMessage').innerHTML = `Ваша скидка: ${discount}%<br>Промокод: <strong>GRAAD_${currentUserId}</strong>`;
+        }
+        
+        function showResult(discount) {
+            document.getElementById('discountValue').textContent = `${discount.value}%`;
+            document.getElementById('promoCode').textContent = `GRAAD_${currentUserId}`;
+            document.getElementById('discountCard').style.display = 'flex';
+            document.getElementById('promoCodeBlock').style.display = 'flex';
+            document.getElementById('resultArea').style.display = 'block';
+            
+            if (discount.value === 0) {
+                document.getElementById('resultTitle').textContent = '😢 Попробуй ещё раз!';
+                document.getElementById('resultMessage').innerHTML = 'Вам выпала скидка 0%... Но вы можете подписаться на наш канал, чтобы не пропустить акции!';
+            } else {
+                document.getElementById('resultTitle').textContent = '🎉 Поздравляем!';
+                document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Промокод: <strong>GRAAD_${currentUserId}</strong><br>Введите его при оформлении заказа.`;
+            }
+            
+            const spinBtn = document.getElementById('spinBtn');
+            spinBtn.disabled = true;
+            spinBtn.style.opacity = '0.5';
+            spinBtn.textContent = 'СКИДКА ПОЛУЧЕНА';
+        }
+        
+        // Вращение колеса
+        function spinWheel() {
+            if (isSpinning) return;
+            if (hasSpun) {
+                if (window.Telegram?.WebApp) {
+                    window.Telegram.WebApp.showPopup({
+                        title: 'Уже крутили!',
+                        message: `Вы уже получили скидку ${currentDiscount}%. Скидка действует только один раз.`,
+                        buttons: [{type: 'ok'}]
+                    });
+                }
+                return;
+            }
+            
+            isSpinning = true;
+            const spinBtn = document.getElementById('spinBtn');
+            spinBtn.disabled = true;
+            spinBtn.style.opacity = '0.6';
+            
+            // Генерируем случайный угол остановки
+            const targetFinalAngle = Math.random() * 360;
+            const fullRotations = 8 + Math.random() * 5;
+            const startAngle = currentAngle;
+            const totalDelta = 360 * fullRotations + targetFinalAngle;
+            
+            let startTime = null;
+            const duration = 3000;
+            
+            function animateSpin(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                
+                currentAngle = startAngle + totalDelta * easeOut;
+                drawWheel();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateSpin);
+                } else {
+                    currentAngle = startAngle + totalDelta;
+                    drawWheel();
+                    
+                    const discount = getDiscountAtAngle(targetFinalAngle);
+                    currentDiscount = discount.value;
+                    
+                    saveDiscountResult(currentDiscount);
+                    showResult(discount);
+                    
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    spinBtn.style.opacity = '1';
+                }
+            }
+            
+            requestAnimationFrame(animateSpin);
+        }
+        
+        document.getElementById('copyBtn')?.addEventListener('click', () => {
+            const promoCode = document.getElementById('promoCode').textContent;
+            navigator.clipboard.writeText(promoCode);
+            
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showPopup({
+                    title: 'Скопировано!',
+                    message: `Промокод ${promoCode} скопирован`,
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        });
+        
+        function initGame() {
+            canvas = document.getElementById('wheelCanvas');
+            ctx = canvas.getContext('2d');
+            
+            const size = Math.min(window.innerWidth - 60, 380);
+            canvas.width = size;
+            canvas.height = size;
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            
+            initSegments();
+            drawWheel();
+            
+            document.getElementById('spinBtn').addEventListener('click', spinWheel);
+            checkExistingDiscount();
+        }
+        
+        function updateCartCounter() {
+            const cart = localStorage.getItem('cart');
+            const items = cart ? JSON.parse(cart) : [];
+            const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const counter = document.querySelector('.cart-count');
+            if (counter) {
+                if (totalCount > 0) {
+                    counter.textContent = totalCount;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            }
+        }
+        
+        window.addEventListener('resize', () => {
+            if (canvas) {
+                const size = Math.min(window.innerWidth - 60, 380);
+                canvas.width = size;
+                canvas.height = size;
+                canvas.style.width = `${size}px`;
+                canvas.style.height = `${size}px`;
+                drawWheel();
+            }
+        });
+        
+        initGame();
+        updateCartCounter();
+        console.log('✅ Колесо фортуны загружено');
+    </script>
+    
+    <style>
+        .game-container {
+            padding-top: 80px;
+            padding-bottom: 50px;
+            min-height: 100vh;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .game-header {
+            text-align: center;
+            padding: 20px 20px 10px;
+        }
+        
+        .game-header h1 {
+            font-size: 42px;
+            font-weight: 400;
+            letter-spacing: 3px;
+            color: #E6E6E6;
+            margin-bottom: 8px;
+        }
+        
+        .game-subtitle {
+            font-size: 16px;
+            color: rgba(230, 230, 230, 0.6);
+        }
+        
+        .user-info {
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: center;
+        }
+        
+        .user-card, .discount-card {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .user-label, .discount-label {
+            font-size: 14px;
+            color: rgba(230, 230, 230, 0.6);
+        }
+        
+        .user-value, .discount-value {
+            font-size: 18px;
+            font-weight: 400;
+            color: #8A1538;
+        }
+        
+        .promo-code-block {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .promo-label {
+            font-size: 12px;
+            color: rgba(230, 230, 230, 0.5);
+        }
+        
+        .promo-code {
+            font-size: 13px;
+            color: #E6E6E6;
+            background: rgba(138, 21, 56, 0.2);
+            padding: 4px 8px;
+            border-radius: 8px;
+            letter-spacing: 0.5px;
+            word-break: break-all;
+        }
+        
+        .copy-btn {
+            padding: 4px 12px;
+            background: #8A1538;
+            border: none;
+            border-radius: 20px;
+            color: #E6E6E6;
+            font-size: 11px;
+            cursor: pointer;
+            font-family: 'Bebas Neue Cyrillic', sans-serif;
+        }
+        
+        .wheel-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 10px 0;
+        }
+        
+        .spin-btn {
+            position: absolute;
+            bottom: 15%;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 28px;
+            background: #8A1538;
+            border: none;
+            border-radius: 60px;
+            color: #E6E6E6;
+            font-size: 16px;
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+            letter-spacing: 2px;
+            cursor: pointer;
+            z-index: 10;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        
+        .spin-btn:active {
+            transform: translateX(-50%) scale(0.96);
+            background: #6d0f2c;
+        }
+        
+        .result-area {
+            padding: 20px;
+        }
+        
+        .result-card {
+            background: rgba(138, 21, 56, 0.15);
+            border: 1px solid rgba(138, 21, 56, 0.3);
+            border-radius: 20px;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .result-card h3 {
+            font-size: 24px;
+            color: #E6E6E6;
+            margin-bottom: 10px;
+        }
+        
+        .result-card p {
+            font-size: 16px;
+            color: rgba(230, 230, 230, 0.8);
+            line-height: 1.5;
+        }
+        
+        .rules-area {
+            padding: 20px;
+            margin: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 20px;
+        }
+        
+        .rules-area h3 {
+            font-size: 20px;
+            color: #E6E6E6;
+            margin-bottom: 12px;
+        }
+        
+        .rules-area p {
+            font-size: 14px;
+            color: rgba(230, 230, 230, 0.7);
+            margin-bottom: 8px;
+            line-height: 1.4;
+        }
+        
+        .rules-area .warning {
+            color: #8A1538;
+            margin-top: 10px;
+        }
+        
+        @media (max-width: 480px) {
+            .game-header h1 {
+                font-size: 32px;
+            }
+            
+            .user-card, .discount-card {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .spin-btn {
+                padding: 10px 20px;
+                font-size: 14px;
+                bottom: 12%;
+            }
+            
+            .promo-code-block {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .promo-code {
+                font-size: 11px;
+            }
+        }
+        
+        @media (max-width: 380px) {
+            .spin-btn {
+                bottom: 8%;
+                padding: 8px 16px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</body>
+</html>

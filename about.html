@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GRAAD | О нас</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Бургер-меню -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="glass-header">
+        <div class="header-left">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
+        </div>
+        <div class="header-right">
+            <button class="icon-btn" id="cartBtn">
+                <img src="cart.svg" alt="Корзина">
+                <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
+            </button>
+        </div>
+    </header>
+
+    <main class="about-page">
+        <!-- Hero секция с видео-заглушкой -->
+        <section class="about-hero">
+            <div class="about-hero-bg"></div>
+            <div class="about-hero-content">
+                <h1 class="about-title">GRAAD</h1>
+                <p class="about-subtitle">Одежда с брянским духом</p>
+                <div class="about-divider"></div>
+            </div>
+        </section>
+
+        <!-- Блок "Кто мы" -->
+        <section class="about-story">
+            <div class="container">
+                <div class="story-content">
+                    <h2 class="story-title">КТО МЫ</h2>
+                    <p class="story-text">GRAAD — это молодой бренд уличной одежды из Брянска. Мы создаём вещи для тех, кто не боится выделяться, кто ценит качество и аутентичность.</p>
+                    <p class="story-text">Каждая модель — это история, вдохновлённая духом нашего города, его силой и характером. Мы объединяем комфорт, стиль и индивидуальность в каждой детали.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Минималистичная сетка ценностей -->
+        <section class="about-values">
+            <div class="container">
+                <div class="values-grid">
+                    <div class="value-item">
+                        <div class="value-icon">✦</div>
+                        <h3 class="value-title">Качество</h3>
+                        <p class="value-text">Плотный хлопок, усиленные швы, износостойкие принты</p>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">✦</div>
+                        <h3 class="value-title">Стиль</h3>
+                        <p class="value-text">Лаконичный дизайн, винтажная эстетика, городской характер</p>
+                    </div>
+                    <div class="value-item">
+                        <div class="value-icon">✦</div>
+                        <h3 class="value-title">Душа</h3>
+                        <p class="value-text">Каждая вещь — отражение брянского духа и силы</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Короткая цитата -->
+        <section class="about-quote">
+            <div class="container">
+                <p class="quote-text">Создаём одежду для тех, кто не боится быть собой</p>
+                <p class="quote-author">GRAAD TEAM</p>
+            </div>
+        </section>
+
+        <!-- Подвал -->
+        <footer class="about-footer">
+            <div class="container">
+                <div class="footer-links">
+                    <a href="index.html">Главная</a>
+                    <a href="catalog.html">Каталог</a>
+                    <a href="#">Доставка</a>
+                    <a href="#">Контакты</a>
+                </div>
+                <div class="footer-social">
+                    <a href="#" class="social-link"><img src="telegram.svg" alt="Telegram"></a>
+                    <a href="#" class="social-link"><img src="tiktok.svg" alt="TikTok"></a>
+                    <a href="#" class="social-link"><img src="instagram.svg" alt="Instagram"></a>
+                </div>
+                <div class="footer-copyright">
+                    © 2025 GRAAD. Все права защищены.
+                </div>
+            </div>
+        </footer>
+    </main>
+
+    <script src="data.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        // Корзина
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        // Логотип на главную
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        // Обновление счётчика корзины
+        function updateCartCounter() {
+            const cart = localStorage.getItem('cart');
+            const items = cart ? JSON.parse(cart) : [];
+            const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const counter = document.querySelector('.cart-count');
+            if (counter) {
+                if (totalCount > 0) {
+                    counter.textContent = totalCount;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            }
+        }
+        
+        updateCartCounter();
+        
+        // Telegram инициализация
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+        }
+        
+        console.log('✅ Страница "О нас" загружена');
+    </script>
+</body>
+</html>

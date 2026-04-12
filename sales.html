@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>GRAAD | Скидки</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- Бургер-меню -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="glass-header">
+        <div class="header-left">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
+        </div>
+        <div class="header-right">
+            <button class="icon-btn" id="cartBtn">
+                <img src="cart.svg" alt="Корзина">
+                <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
+            </button>
+        </div>
+    </header>
+
+    <div class="sales-container">
+        <div class="sales-header">
+            <h1>СКИДКИ</h1>
+        </div>
+
+        <!-- Баннер с мини-игрой -->
+        <div class="game-banner">
+            <div class="game-banner-content">
+                <div class="game-banner-icon">🎮</div>
+                <h2 class="game-banner-title">Играй и получай скидку!</h2>
+                <p class="game-banner-text">Сыграйте в нашу мини-игру и получите скидку от 5% до 20% на первый заказ</p>
+                <button class="game-banner-btn" id="playGameBtn">ИГРАТЬ</button>
+            </div>
+            <div class="game-banner-decor">
+                <span class="discount-badge">5-20%</span>
+            </div>
+        </div>
+
+        <!-- Текущие скидки -->
+        <div class="sales-section">
+            <h2 class="sales-section-title">Актуальные скидки</h2>
+            <div class="sales-grid" id="sales-grid">
+                <div class="sales-loading">
+                    <div class="loading-spinner"></div>
+                    <p>Загрузка скидок...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="data.js"></script>
+    <script src="config.js"></script>
+    <script>
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        // Пункты меню
+        document.getElementById('gameLink')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            closeBurger();
+            window.location.href = 'game.html';
+        });
+        
+        // Кнопка "ИГРАТЬ"
+        document.getElementById('playGameBtn')?.addEventListener('click', () => {
+            window.location.href = 'game.html';
+        });
+        
+        // Функции корзины
+        function getCart() {
+            const cart = localStorage.getItem('cart');
+            return cart ? JSON.parse(cart) : [];
+        }
+        
+        function saveCart(cart) {
+            localStorage.setItem('cart', JSON.stringify(cart));
+        }
+        
+        function updateCartCounter() {
+            const cart = getCart();
+            const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+            const counters = document.querySelectorAll('.cart-count');
+            counters.forEach(counter => {
+                if (totalItems > 0) {
+                    counter.textContent = totalItems;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            });
+        }
+        
+        function addToCart(productId, size) {
+            const cart = getCart();
+            const existingItem = cart.find(item => item.id === productId && item.size === size);
+            
+            let product = null;
+            if (typeof products !== 'undefined' && products.length > 0) {
+                product = products.find(p => p.id === productId);
+            }
+            
+            if (!product) return;
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({
+                    id: productId,
+                    name: product.name,
+                    price: product.price,
+                    size: size,
+                    quantity: 1,
+                    image: product.images[0]
+                });
+            }
+            
+            saveCart(cart);
+            updateCartCounter();
+            showAddedFeedback();
+        }
+        
+        function showAddedFeedback() {
+            const feedback = document.createElement('div');
+            feedback.textContent = '✓ Товар добавлен в корзину';
+            feedback.style.cssText = `
+                position: fixed;
+                bottom: 100px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #8A1538;
+                color: #E6E6E6;
+                padding: 10px 24px;
+                border-radius: 60px;
+                font-size: 14px;
+                font-family: 'Bebas Neue Cyrillic', sans-serif;
+                z-index: 200;
+                animation: fadeOut 1.5s ease forwards;
+            `;
+            
+            if (!document.querySelector('#feedbackStyle')) {
+                const style = document.createElement('style');
+                style.id = 'feedbackStyle';
+                style.textContent = `
+                    @keyframes fadeOut {
+                        0% { opacity: 1; transform: translateX(-50%) translateY(0); }
+                        70% { opacity: 1; }
+                        100% { opacity: 0; transform: translateX(-50%) translateY(-20px); visibility: hidden; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(feedback);
+            setTimeout(() => feedback.remove(), 1500);
+        }
+        
+        // Рендер товаров со скидками (только где sale === true)
+        function renderSalesItems() {
+            const grid = document.getElementById('sales-grid');
+            
+            if (typeof products === 'undefined' || !products.length) {
+                grid.innerHTML = `
+                    <div class="sales-empty">
+                        <div class="sales-empty-icon">🏷️</div>
+                        <div class="sales-empty-text">Товары не найдены</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Фильтруем только товары с sale === true
+            let saleProducts = products.filter(p => p.sale === true);
+            
+            if (saleProducts.length === 0) {
+                grid.innerHTML = `
+                    <div class="sales-empty">
+                        <div class="sales-empty-icon">🏷️</div>
+                        <div class="sales-empty-text">Скидки скоро появятся</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            grid.innerHTML = saleProducts.map(product => `
+                <div class="sales-item">
+                    <div class="sales-item-image" onclick="window.location.href='product.html?id=${product.id}'">
+                        <img src="${product.images[0]}" alt="${product.name}" onerror="this.src='https://placehold.co/800x1000/1a1a2e/E6E6E6?text=GRAAD'">
+                        <div class="sales-badge">-${product.discount || 15}%</div>
+                    </div>
+                    <div class="sales-item-info">
+                        <h3 class="sales-item-title">${product.name}</h3>
+                        <div class="sales-price-block">
+                            <span class="sales-old-price">${(product.oldPrice || product.price).toLocaleString()} ₽</span>
+                            <span class="sales-new-price">${product.price.toLocaleString()} ₽</span>
+                        </div>
+                        <div class="sales-item-buttons">
+                            <button class="sales-view-btn" onclick="window.location.href='product.html?id=${product.id}'">ПОСМОТРЕТЬ</button>
+                            <button class="sales-cart-btn" onclick="event.stopPropagation(); addToCart(${product.id}, '${product.sizes[0]}')">В КОРЗИНУ</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Telegram инициализация
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            const backButton = tg.BackButton;
+            if (backButton) {
+                backButton.onClick(() => {
+                    window.history.back();
+                });
+            }
+        }
+        
+        // Обработчики кнопок
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        // Запуск
+        renderSalesItems();
+        updateCartCounter();
+        
+        console.log('✅ Страница скидок загружена');
+    </script>
+</body>
+</html>
