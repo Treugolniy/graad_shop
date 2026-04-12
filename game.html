@@ -96,13 +96,13 @@
         let currentDiscount = null;
         let hasSpun = false;
         
-        const SEGMENTS = [
-            { name: '0%', value: 0, color: '#555555', probability: 15 },
-            { name: '5%', value: 5, color: '#8A1538', probability: 35 },
-            { name: '10%', value: 10, color: '#6B0F2C', probability: 25 },
-            { name: '15%', value: 15, color: '#8A1538', probability: 15 },
-            { name: '20%', value: 20, color: '#4A0A1C', probability: 10 }
-        ];
+const SEGMENTS = [
+    { name: '0%', value: 0, color: '#555555', probability: 30 },   // 30%
+    { name: '5%', value: 5, color: '#8A1538', probability: 30 },   // 30%
+    { name: '10%', value: 10, color: '#6B0F2C', probability: 17 }, // 20%
+    { name: '15%', value: 15, color: '#8A1538', probability: 13 }, // 15%
+    { name: '20%', value: 20, color: '#4A0A1C', probability: 10 }   // 5%
+];
         
         let segmentsWithAngles = [];
         let currentAngle = 0;
@@ -121,7 +121,6 @@
                 tgUser = tg.initDataUnsafe.user;
                 currentUserId = tgUser.id.toString();
                 
-                // Получаем username для привязки скидки
                 if (tgUser.username) {
                     currentUsername = tgUser.username;
                     document.getElementById('usernameDisplay').textContent = `@${currentUsername}`;
@@ -134,7 +133,6 @@
                 }
                 console.log('Пользователь:', currentUsername, 'ID:', currentUserId);
             } else {
-                // Гость — генерируем уникальный username
                 let guestUsername = localStorage.getItem('guest_username');
                 if (!guestUsername) {
                     guestUsername = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
@@ -145,7 +143,6 @@
                 document.getElementById('usernameDisplay').textContent = currentUsername.substring(0, 20) + '...';
             }
         } else {
-            // Для обычного браузера
             let browserUsername = localStorage.getItem('browser_username');
             if (!browserUsername) {
                 browserUsername = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
@@ -195,7 +192,8 @@
                     ...segment,
                     startAngle: startAngle,
                     endAngle: startAngle + angle,
-                    angle: angle
+                    angle: angle,
+                    midAngle: startAngle + angle / 2
                 });
                 startAngle += angle;
             }
@@ -238,6 +236,7 @@
                 ctx.restore();
             }
             
+            // Центральный круг
             ctx.beginPath();
             ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
             ctx.fillStyle = '#8A1538';
@@ -246,25 +245,45 @@
             ctx.lineWidth = 3;
             ctx.stroke();
             
-            // Стрелка сверху
+            // Стрелка (треугольник) — указывает строго вверх (12 часов)
             ctx.beginPath();
-            ctx.moveTo(centerX - 12, 15);
-            ctx.lineTo(centerX, 3);
-            ctx.lineTo(centerX + 12, 15);
+            ctx.moveTo(centerX - 12, 18);
+            ctx.lineTo(centerX, 4);
+            ctx.lineTo(centerX + 12, 18);
             ctx.fillStyle = '#E6E6E6';
+            ctx.fill();
+            
+            // Добавляем маленький кружок на конце стрелки для красоты
+            ctx.beginPath();
+            ctx.arc(centerX, 8, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#8A1538';
             ctx.fill();
         }
         
-        // Получение скидки по углу остановки
-        function getDiscountAtAngle(finalAngle) {
-            let pointerAngle = (360 - (finalAngle % 360)) % 360;
-            let adjustedAngle = (pointerAngle + 90) % 360;
+        // НОВАЯ УПРОЩЁННАЯ ФУНКЦИЯ — определяем скидку по положению секторов
+        function getDiscountAtAngle() {
+            // Текущий угол поворота колеса
+            const rotation = currentAngle % 360;
             
-            console.log(`Угол остановки: ${finalAngle}° → откорректированный: ${adjustedAngle}°`);
+            // Стрелка всегда смотрит вверх (12 часов = 270° в canvas координатах)
+            // Нам нужно определить, какой сектор находится в положении стрелки
+            // Для этого смотрим, какой сегмент содержит угол (270° - rotation)
+            const pointerAngle = (270 - rotation + 360) % 360;
+            
+            console.log(`Поворот колеса: ${rotation}°, угол стрелки: ${pointerAngle}°`);
             
             for (const segment of segmentsWithAngles) {
-                if (adjustedAngle >= segment.startAngle && adjustedAngle < segment.endAngle) {
+                if (pointerAngle >= segment.startAngle && pointerAngle < segment.endAngle) {
                     console.log(`Попадание в сектор: ${segment.name}`);
+                    return segment;
+                }
+            }
+            
+            // Если не нашли — ищем по границам
+            for (const segment of segmentsWithAngles) {
+                if (Math.abs(pointerAngle - segment.startAngle) < 0.1 || 
+                    (pointerAngle >= segment.startAngle && pointerAngle < segment.endAngle)) {
+                    console.log(`Попадание (fallback) в сектор: ${segment.name}`);
                     return segment;
                 }
             }
@@ -273,7 +292,7 @@
             return SEGMENTS[0];
         }
         
-        // Сохранение скидки (привязка к username)
+        // Сохранение скидки
         async function saveDiscountResult(discount) {
             const discountData = {
                 username: currentUsername,
@@ -289,7 +308,6 @@
                 existingDiscounts = JSON.parse(saved);
             }
             
-            // Проверяем по username (уникальный идентификатор)
             const existingIndex = existingDiscounts.findIndex(d => d.username === currentUsername);
             if (existingIndex === -1) {
                 existingDiscounts.push(discountData);
@@ -316,7 +334,7 @@
             hasSpun = true;
         }
         
-        // Проверка существующей скидки (по username)
+        // Проверка существующей скидки
         function checkExistingDiscount() {
             const saved = localStorage.getItem('grad_discounts');
             if (saved) {
@@ -388,30 +406,32 @@
             spinBtn.disabled = true;
             spinBtn.style.opacity = '0.6';
             
-            const targetFinalAngle = Math.random() * 360;
-            const fullRotations = 8 + Math.random() * 5;
+            // Случайное количество оборотов (5-10) + случайный конечный угол
+            const spins = 5 + Math.random() * 5;
+            const targetAngle = Math.random() * 360;
             const startAngle = currentAngle;
-            const totalDelta = 360 * fullRotations + targetFinalAngle;
+            const delta = 360 * spins + targetAngle;
             
             let startTime = null;
-            const duration = 3000;
+            const duration = 2500;
             
-            function animateSpin(timestamp) {
+            function animate(timestamp) {
                 if (!startTime) startTime = timestamp;
                 const elapsed = timestamp - startTime;
                 const progress = Math.min(1, elapsed / duration);
+                // Плавное замедление
                 const easeOut = 1 - Math.pow(1 - progress, 3);
                 
-                currentAngle = startAngle + totalDelta * easeOut;
+                currentAngle = startAngle + delta * easeOut;
                 drawWheel();
                 
                 if (progress < 1) {
-                    requestAnimationFrame(animateSpin);
+                    requestAnimationFrame(animate);
                 } else {
-                    currentAngle = startAngle + totalDelta;
+                    currentAngle = startAngle + delta;
                     drawWheel();
                     
-                    const discount = getDiscountAtAngle(targetFinalAngle);
+                    const discount = getDiscountAtAngle();
                     currentDiscount = discount.value;
                     
                     saveDiscountResult(currentDiscount);
@@ -423,7 +443,7 @@
                 }
             }
             
-            requestAnimationFrame(animateSpin);
+            requestAnimationFrame(animate);
         }
         
         document.getElementById('copyBtn')?.addEventListener('click', () => {
@@ -660,37 +680,15 @@
         }
         
         @media (max-width: 480px) {
-            .game-header h1 {
-                font-size: 32px;
-            }
-            
-            .user-card, .discount-card {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .spin-btn {
-                padding: 10px 20px;
-                font-size: 14px;
-                bottom: 12%;
-            }
-            
-            .promo-code-block {
-                width: 100%;
-                justify-content: center;
-            }
-            
-            .promo-code {
-                font-size: 11px;
-            }
+            .game-header h1 { font-size: 32px; }
+            .user-card, .discount-card { width: 100%; justify-content: center; }
+            .spin-btn { padding: 10px 20px; font-size: 14px; bottom: 12%; }
+            .promo-code-block { width: 100%; justify-content: center; }
+            .promo-code { font-size: 11px; }
         }
         
         @media (max-width: 380px) {
-            .spin-btn {
-                bottom: 8%;
-                padding: 8px 16px;
-                font-size: 12px;
-            }
+            .spin-btn { bottom: 8%; padding: 8px 16px; font-size: 12px; }
         }
     </style>
 </body>
