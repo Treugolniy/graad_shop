@@ -97,10 +97,8 @@
     </div>
 
     <script src="data.js"></script>
+    <script src="config.js"></script>
     <script>
-        // Google Apps Script URL
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxrPLdftD0-lOc-1yjwjJ-ZyTYd_U__lWxZXEnUOmr-NKVO9-a8KPaMPjL-KuFabolv/exec';
-        
         // Текущие данные
         let currentDiscount = 0;
         let appliedPromoCode = null;
@@ -176,18 +174,23 @@
         
         // Проверка промокода
         function checkPromoCode(promoCode) {
+            // Ожидаемый формат: GRAAD_username или GRAAD_userId
             const expectedPrefix = 'GRAAD_';
             if (!promoCode || !promoCode.startsWith(expectedPrefix)) {
                 return { valid: false, message: 'Неверный формат промокода. Промокод должен начинаться с GRAAD_' };
             }
             
             const codeValue = promoCode.substring(expectedPrefix.length);
+            
+            // Получаем все сохранённые скидки
             const savedDiscounts = localStorage.getItem('grad_discounts');
             if (!savedDiscounts) {
                 return { valid: false, message: 'Промокод не найден. Получите скидку в игре "Колесо фортуны"' };
             }
             
             const discounts = JSON.parse(savedDiscounts);
+            
+            // Ищем скидку по userId
             const discountEntry = discounts.find(d => 
                 d.userId === codeValue || 
                 d.userId === currentUserId ||
@@ -198,6 +201,7 @@
                 return { valid: false, message: 'Промокод не найден. Проверьте правильность ввода или получите скидку в игре' };
             }
             
+            // Проверяем, не использован ли уже промокод
             const usedPromoCodes = localStorage.getItem('used_promocodes');
             const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
             if (used.includes(promoCode)) {
@@ -220,20 +224,24 @@
                 currentDiscount = result.discount;
                 appliedPromoCode = promoCode;
                 
+                // Сохраняем использованный промокод
                 const usedPromoCodes = localStorage.getItem('used_promocodes');
                 const used = usedPromoCodes ? JSON.parse(usedPromoCodes) : [];
                 used.push(promoCode);
                 localStorage.setItem('used_promocodes', JSON.stringify(used));
                 
+                // Показываем сообщение об успехе
                 const promoMessage = document.getElementById('promoMessage');
                 promoMessage.textContent = result.message;
                 promoMessage.style.color = '#4caf50';
                 
+                // Сворачиваем блок промокода
                 const promoBody = document.getElementById('promoBody');
                 const promoToggle = document.getElementById('promoToggle');
                 promoBody.style.display = 'none';
                 promoToggle.textContent = '▼';
                 
+                // Обновляем отображение корзины
                 renderCart();
                 
                 if (window.Telegram?.WebApp) {
@@ -247,21 +255,6 @@
                 const promoMessage = document.getElementById('promoMessage');
                 promoMessage.textContent = result.message;
                 promoMessage.style.color = '#ff3b30';
-            }
-        }
-        
-        // Отправка заказа через Google Apps Script
-        async function sendOrderToTelegram(message) {
-            try {
-                await fetch(GAS_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: message, type: 'text' })
-                });
-                return true;
-            } catch (error) {
-                console.error('Ошибка отправки:', error);
-                return false;
             }
         }
         
@@ -309,6 +302,7 @@
             
             document.getElementById('total-items').textContent = totalItems;
             
+            // Отображаем скидку если она есть
             const discountRow = document.getElementById('discountRow');
             const discountAmountRow = document.getElementById('discountAmountRow');
             const discountPercentSpan = document.getElementById('discount-percent');
@@ -413,7 +407,7 @@
         });
         
         // Кнопка оформления заказа
-        document.getElementById('checkout-btn')?.addEventListener('click', async () => {
+        document.getElementById('checkout-btn')?.addEventListener('click', () => {
             const cart = getCart();
             if (cart.length === 0) return;
             
@@ -439,37 +433,33 @@
             message += `💎 Итого: ${finalTotal.toLocaleString()} ₽\n`;
             message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
             
-            // Отправка через Google Apps Script
-            const sent = await sendOrderToTelegram(message);
+            // Отправка в Telegram
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    chat_id: ADMIN_CHAT_ID,
+                    text: message,
+                    parse_mode: 'HTML'
+                })
+            }).catch(err => console.error('Ошибка отправки:', err));
             
-            if (sent) {
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.showPopup({
-                        title: '✅ Заказ оформлен!',
-                        message: 'Ваш заказ передан менеджеру. Скоро с вами свяжутся!',
-                        buttons: [{type: 'ok'}]
-                    });
-                } else {
-                    alert('Заказ оформлен! С вами свяжутся.');
-                }
-                
-                // Очищаем корзину
-                localStorage.setItem('cart', JSON.stringify([]));
-                currentDiscount = 0;
-                appliedPromoCode = null;
-                renderCart();
-                updateCartCounter();
+            if (window.Telegram?.WebApp) {
+                window.Telegram.WebApp.showPopup({
+                    title: '✅ Заказ оформлен!',
+                    message: 'Ваш заказ передан менеджеру. Скоро с вами свяжутся!',
+                    buttons: [{type: 'ok'}]
+                });
             } else {
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.showPopup({
-                        title: '❌ Ошибка',
-                        message: 'Не удалось оформить заказ. Попробуйте позже.',
-                        buttons: [{type: 'ok'}]
-                    });
-                } else {
-                    alert('Ошибка оформления заказа.');
-                }
+                alert('Заказ оформлен! С вами свяжутся.');
             }
+            
+            // Очищаем корзину
+            localStorage.setItem('cart', JSON.stringify([]));
+            currentDiscount = 0;
+            appliedPromoCode = null;
+            renderCart();
+            updateCartCounter();
         });
         
         // Запуск
