@@ -92,7 +92,7 @@
             <button class="btn-checkout" id="checkout-btn">
                 ОФОРМИТЬ ЗАКАЗ
             </button>
-            <p class="checkout-note">Оплата будет добавлена позже</p>
+            <p class="checkout-note">После оформления вы получите реквизиты для оплаты</p>
         </div>
     </div>
 
@@ -112,7 +112,6 @@
             
             if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
                 tgUser = tg.initDataUnsafe.user;
-                // Получаем username или имя пользователя
                 if (tgUser.username) {
                     tgUsername = `@${tgUser.username}`;
                 } else if (tgUser.first_name) {
@@ -209,9 +208,9 @@
             
             const discounts = JSON.parse(savedDiscounts);
             const discountEntry = discounts.find(d => 
-                d.userId === codeValue || 
-                d.userId === currentUserId ||
-                (currentUserId && d.userId === currentUserId)
+                d.username === codeValue || 
+                d.username === currentUsername ||
+                d.userId === currentUserId
             );
             
             if (!discountEntry) {
@@ -364,6 +363,21 @@
         if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
         if (burgerClose) burgerClose.addEventListener('click', closeBurger);
         
+        // Telegram инициализация
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            const backButton = tg.BackButton;
+            if (backButton) {
+                backButton.onClick(() => {
+                    window.history.back();
+                });
+            }
+        }
+        
         // Обработчики кнопок
         document.getElementById('cartBtn')?.addEventListener('click', () => {
             renderCart();
@@ -403,55 +417,114 @@
         });
         
         // Кнопка оформления заказа
-        document.getElementById('checkout-btn')?.addEventListener('click', () => {
+        document.getElementById('checkout-btn')?.addEventListener('click', async () => {
             const cart = getCart();
             if (cart.length === 0) return;
             
-            // Формируем сообщение с username вместо ID
-            let message = `🧾 НОВЫЙ ЗАКАЗ\n\n`;
-            message += `👤 Покупатель: ${tgUsername}\n`;
-            if (tgUser && tgUser.id) {
-                message += `🆔 Telegram ID: ${tgUser.id}\n`;
-            }
-            if (currentDiscount > 0) {
-                message += `🏷️ Промокод: ${appliedPromoCode} (скидка ${currentDiscount}%)\n`;
-            }
-            message += `📦 Товары:\n`;
+            // Получаем информацию о пользователе
+            let userMention = '';
+            let userFirstName = '';
+            let userTelegramId = null;
             
-            cart.forEach(item => {
-                message += `  - ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽\n`;
-            });
+            if (window.Telegram && window.Telegram.WebApp) {
+                const tg = window.Telegram.WebApp;
+                if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                    const user = tg.initDataUnsafe.user;
+                    userTelegramId = user.id;
+                    userFirstName = user.first_name || '';
+                    if (user.username) {
+                        userMention = `@${user.username}`;
+                    } else {
+                        userMention = `${user.first_name || ''} ${user.last_name || ''}`.trim();
+                    }
+                }
+            }
             
+            // Формируем сумму
             const subtotal = getCartTotal();
             const discountAmount = Math.round(subtotal * currentDiscount / 100);
             const finalTotal = subtotal - discountAmount;
             
-            message += `\n💰 Сумма: ${subtotal.toLocaleString()} ₽\n`;
-            if (currentDiscount > 0) {
-                message += `🎁 Скидка ${currentDiscount}%: -${discountAmount.toLocaleString()} ₽\n`;
+            // Формируем сообщение с заказом для админа
+            let adminMessage = `🧾 НОВЫЙ ЗАКАЗ\n\n`;
+            adminMessage += `👤 Покупатель: ${userMention || 'Не указан'}\n`;
+            if (userTelegramId) {
+                adminMessage += `🆔 Telegram ID: ${userTelegramId}\n`;
             }
-            message += `💎 Итого: ${finalTotal.toLocaleString()} ₽\n`;
-            message += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            if (currentDiscount > 0) {
+                adminMessage += `🏷️ Промокод: ${appliedPromoCode} (скидка ${currentDiscount}%)\n`;
+            }
+            adminMessage += `📦 Товары:\n`;
             
-            // Отправка в Telegram
-            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    chat_id: ADMIN_CHAT_ID,
-                    text: message,
-                    parse_mode: 'HTML'
-                })
-            }).catch(err => console.error('Ошибка отправки:', err));
+            cart.forEach(item => {
+                adminMessage += `  - ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽\n`;
+            });
             
+            adminMessage += `\n💰 Сумма: ${subtotal.toLocaleString()} ₽\n`;
+            if (currentDiscount > 0) {
+                adminMessage += `🎁 Скидка ${currentDiscount}%: -${discountAmount.toLocaleString()} ₽\n`;
+            }
+            adminMessage += `💎 Итого: ${finalTotal.toLocaleString()} ₽\n`;
+            adminMessage += `\n⏰ ${new Date().toLocaleString('ru-RU')}`;
+            
+            // Отправляем заказ админу в Telegram
+            try {
+                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_id: ADMIN_CHAT_ID,
+                        text: adminMessage,
+                        parse_mode: 'HTML'
+                    })
+                });
+            } catch (error) {
+                console.error('Ошибка отправки админу:', error);
+            }
+            
+            // Текст для клиента с реквизитами для оплаты
+            const orderItems = cart.map(item => `  • ${item.name} (${item.size}) x${item.quantity} = ${(item.price * item.quantity).toLocaleString()} ₽`).join('\n');
+            
+            const clientMessage = `✅ <b>Ваш заказ принят!</b>\n\n` +
+                `📦 <b>Состав заказа:</b>\n${orderItems}\n\n` +
+                `💰 <b>Сумма к оплате:</b> ${finalTotal.toLocaleString()} ₽\n\n` +
+                `💳 <b>Реквизиты для оплаты:</b>\n` +
+                `Номер телефона: <b>89003550088</b>\n` +
+                `Получатель: <b>Арсений М.</b>\n` +
+                `Банк: <b>Альфа-Банк</b>\n\n` +
+                `📝 <b>После оплаты:</b>\n` +
+                `1. Отправьте чек в этот чат\n` +
+                `2. Менеджер свяжется с вами в течение 15 минут\n` +
+                `3. Подтвердит доставку\n\n` +
+                `⚠️ Чек действителен 24 часа.\n\n` +
+                `<i>Если у вас возникли вопросы, напишите @grad_support</i>`;
+            
+            // Отправляем клиенту сообщение с реквизитами
+            if (userTelegramId) {
+                try {
+                    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: userTelegramId,
+                            text: clientMessage,
+                            parse_mode: 'HTML'
+                        })
+                    });
+                } catch (error) {
+                    console.error('Ошибка отправки клиенту:', error);
+                }
+            }
+            
+            // Показываем попап с подтверждением
             if (window.Telegram?.WebApp) {
                 window.Telegram.WebApp.showPopup({
                     title: '✅ Заказ оформлен!',
-                    message: 'Ваш заказ передан менеджеру. Скоро с вами свяжутся!',
+                    message: 'Проверьте сообщение от бота — там реквизиты для оплаты.',
                     buttons: [{type: 'ok'}]
                 });
             } else {
-                alert('Заказ оформлен! С вами свяжутся.');
+                alert('Заказ оформлен! Проверьте сообщение от бота.');
             }
             
             // Очищаем корзину
@@ -551,6 +624,16 @@
             font-size: 12px;
             margin-top: 10px;
             text-align: center;
+        }
+        
+        .btn-checkout {
+            margin-top: 20px;
+        }
+        
+        .checkout-note {
+            margin-top: 12px;
+            font-size: 11px;
+            color: rgba(230, 230, 230, 0.4);
         }
         
         @media (max-width: 480px) {
