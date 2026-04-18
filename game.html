@@ -6,508 +6,8 @@
     <title>GRAAD | Колесо фортуны</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-</head>
-<body>
-    <!-- Бургер-меню -->
-    <div class="burger-menu" id="burgerMenu">
-        <div class="burger-overlay" id="burgerOverlay"></div>
-        <div class="burger-panel">
-            <div class="burger-header">
-                <img src="logo.svg" alt="GRAAD" class="burger-logo">
-                <button class="burger-close" id="burgerClose">✕</button>
-            </div>
-            <nav class="burger-nav">
-                <a href="index.html" class="burger-link">Главная</a>
-                <a href="catalog.html" class="burger-link">Каталог</a>
-                <a href="about.html" class="burger-link">О нас</a>
-                <a href="new.html" class="burger-link">Новинки</a>
-                <a href="sales.html" class="burger-link">Скидки</a>
-                <a href="support.html" class="burger-link">Поддержка</a>
-                <a href="game.html" class="burger-link">Получить скидку!</a>
-            </nav>
-        </div>
-    </div>
-
-    <header class="glass-header">
-        <div class="header-left">
-            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
-        </div>
-        <div class="header-right">
-            <button class="icon-btn" id="cartBtn">
-                <img src="cart.svg" alt="Корзина">
-                <span class="cart-count" style="display: none;">0</span>
-            </button>
-            <button class="burger-btn" id="burgerBtn">
-                <img src="menu.svg" alt="Меню">
-            </button>
-        </div>
-    </header>
-
-    <div class="game-container">
-        <div class="game-header">
-            <h1>КОЛЕСО ФОРТУНЫ</h1>
-            <p class="game-subtitle">Крути колесо и получи скидку на первый заказ!</p>
-        </div>
-
-        <div class="user-info" id="userInfo">
-            <div class="user-card">
-                <span class="user-label">Ваш Username:</span>
-                <span class="user-value" id="usernameDisplay">Загрузка...</span>
-            </div>
-            <div class="discount-card" id="discountCard" style="display: none;">
-                <span class="discount-label">Ваша скидка:</span>
-                <span class="discount-value" id="discountValue">-</span>
-                <div class="promo-code-block" id="promoCodeBlock" style="display: none;">
-                    <span class="promo-label">Промокод:</span>
-                    <span class="promo-code" id="promoCode">-</span>
-                    <button class="copy-btn" id="copyBtn">Копировать</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="wheel-wrapper">
-            <canvas id="wheelCanvas" width="500" height="500"></canvas>
-            <button class="spin-btn" id="spinBtn">КРУТИТЬ!</button>
-        </div>
-
-        <div class="result-area" id="resultArea" style="display: none;">
-            <div class="result-card">
-                <h3 id="resultTitle"></h3>
-                <p id="resultMessage"></p>
-            </div>
-        </div>
-
-        <div class="rules-area">
-            <h3>Как получить скидку?</h3>
-            <p>1. Крути колесо один раз — выпадет скидка от 0% до 20%</p>
-            <p>2. Скидка автоматически привязывается к вашему Username</p>
-            <p>3. При оформлении заказа введите промокод: <strong>GRAAD_ВАШ_USERNAME</strong></p>
-            <p>4. Скидка действует только на первый заказ</p>
-            <p class="warning">⚠️ Скидку можно получить только один раз!</p>
-        </div>
-    </div>
-
-    <script src="data.js"></script>
-    <script src="config.js"></script>
-    <script>
-        let tgUser = null;
-        let currentUsername = '';
-        let currentUserId = '';
-        let currentDiscount = null;
-        let hasSpun = false;
-        
-const SEGMENTS = [
-    { name: '0%', value: 0, color: '#555555', probability: 30 },   // 30%
-    { name: '5%', value: 5, color: '#8A1538', probability: 30 },   // 30%
-    { name: '10%', value: 10, color: '#6B0F2C', probability: 17 }, // 20%
-    { name: '15%', value: 15, color: '#8A1538', probability: 13 }, // 15%
-    { name: '20%', value: 20, color: '#4A0A1C', probability: 10 }   // 5%
-];
-        
-        let segmentsWithAngles = [];
-        let currentAngle = 0;
-        let isSpinning = false;
-        let canvas = null;
-        let ctx = null;
-        
-        // Инициализация пользователя и получение username
-        if (window.Telegram && window.Telegram.WebApp) {
-            const tg = window.Telegram.WebApp;
-            tg.ready();
-            tg.expand();
-            tg.enableClosingConfirmation();
-            
-            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
-                tgUser = tg.initDataUnsafe.user;
-                currentUserId = tgUser.id.toString();
-                
-                if (tgUser.username) {
-                    currentUsername = tgUser.username;
-                    document.getElementById('usernameDisplay').textContent = `@${currentUsername}`;
-                } else if (tgUser.first_name) {
-                    currentUsername = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim().toLowerCase().replace(/\s/g, '_');
-                    document.getElementById('usernameDisplay').textContent = currentUsername;
-                } else {
-                    currentUsername = `user_${currentUserId}`;
-                    document.getElementById('usernameDisplay').textContent = currentUsername;
-                }
-                console.log('Пользователь:', currentUsername, 'ID:', currentUserId);
-            } else {
-                let guestUsername = localStorage.getItem('guest_username');
-                if (!guestUsername) {
-                    guestUsername = 'guest_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                    localStorage.setItem('guest_username', guestUsername);
-                }
-                currentUsername = guestUsername;
-                currentUserId = guestUsername;
-                document.getElementById('usernameDisplay').textContent = currentUsername.substring(0, 20) + '...';
-            }
-        } else {
-            let browserUsername = localStorage.getItem('browser_username');
-            if (!browserUsername) {
-                browserUsername = 'browser_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-                localStorage.setItem('browser_username', browserUsername);
-            }
-            currentUsername = browserUsername;
-            currentUserId = browserUsername;
-            document.getElementById('usernameDisplay').textContent = currentUsername.substring(0, 20) + '...';
-        }
-        
-        // Бургер-меню
-        const burgerBtn = document.getElementById('burgerBtn');
-        const burgerMenu = document.getElementById('burgerMenu');
-        const burgerOverlay = document.getElementById('burgerOverlay');
-        const burgerClose = document.getElementById('burgerClose');
-        
-        function openBurger() {
-            burgerMenu.classList.add('open');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closeBurger() {
-            burgerMenu.classList.remove('open');
-            document.body.style.overflow = '';
-        }
-        
-        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
-        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
-        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
-        
-        document.getElementById('cartBtn')?.addEventListener('click', () => {
-            window.location.href = 'cart.html';
-        });
-        
-        document.getElementById('logoBtn')?.addEventListener('click', () => {
-            window.location.href = 'index.html';
-        });
-        
-        // Инициализация сегментов
-        function initSegments() {
-            let startAngle = 0;
-            segmentsWithAngles = [];
-            
-            for (const segment of SEGMENTS) {
-                const angle = (segment.probability / 100) * 360;
-                segmentsWithAngles.push({
-                    ...segment,
-                    startAngle: startAngle,
-                    endAngle: startAngle + angle,
-                    angle: angle,
-                    midAngle: startAngle + angle / 2
-                });
-                startAngle += angle;
-            }
-            console.log('Сегменты:', segmentsWithAngles);
-        }
-        
-        // Отрисовка колеса
-        function drawWheel() {
-            if (!canvas || !ctx) return;
-            
-            const size = canvas.width;
-            const centerX = size / 2;
-            const centerY = size / 2;
-            const radius = size * 0.42;
-            
-            ctx.clearRect(0, 0, size, size);
-            
-            for (const segment of segmentsWithAngles) {
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                const startRad = (segment.startAngle + currentAngle) * Math.PI / 180;
-                const endRad = (segment.endAngle + currentAngle) * Math.PI / 180;
-                ctx.arc(centerX, centerY, radius, startRad, endRad);
-                ctx.closePath();
-                
-                ctx.fillStyle = segment.color;
-                ctx.fill();
-                ctx.strokeStyle = '#E6E6E6';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                
-                ctx.save();
-                ctx.translate(centerX, centerY);
-                ctx.rotate((segment.startAngle + segment.endAngle + currentAngle * 2) / 2 * Math.PI / 180);
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#E6E6E6';
-                ctx.font = `bold ${Math.max(14, Math.floor(size / 25))}px "Bebas Neue Cyrillic", "Bebas Neue", sans-serif`;
-                ctx.fillText(segment.name, radius * 0.65, 0);
-                ctx.restore();
-            }
-            
-            // Центральный круг
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
-            ctx.fillStyle = '#8A1538';
-            ctx.fill();
-            ctx.strokeStyle = '#E6E6E6';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-            
-            // Стрелка (треугольник) — указывает строго вверх (12 часов)
-            ctx.beginPath();
-            ctx.moveTo(centerX - 12, 18);
-            ctx.lineTo(centerX, 4);
-            ctx.lineTo(centerX + 12, 18);
-            ctx.fillStyle = '#E6E6E6';
-            ctx.fill();
-            
-            // Добавляем маленький кружок на конце стрелки для красоты
-            ctx.beginPath();
-            ctx.arc(centerX, 8, 4, 0, 2 * Math.PI);
-            ctx.fillStyle = '#8A1538';
-            ctx.fill();
-        }
-        
-        // НОВАЯ УПРОЩЁННАЯ ФУНКЦИЯ — определяем скидку по положению секторов
-        function getDiscountAtAngle() {
-            // Текущий угол поворота колеса
-            const rotation = currentAngle % 360;
-            
-            // Стрелка всегда смотрит вверх (12 часов = 270° в canvas координатах)
-            // Нам нужно определить, какой сектор находится в положении стрелки
-            // Для этого смотрим, какой сегмент содержит угол (270° - rotation)
-            const pointerAngle = (270 - rotation + 360) % 360;
-            
-            console.log(`Поворот колеса: ${rotation}°, угол стрелки: ${pointerAngle}°`);
-            
-            for (const segment of segmentsWithAngles) {
-                if (pointerAngle >= segment.startAngle && pointerAngle < segment.endAngle) {
-                    console.log(`Попадание в сектор: ${segment.name}`);
-                    return segment;
-                }
-            }
-            
-            // Если не нашли — ищем по границам
-            for (const segment of segmentsWithAngles) {
-                if (Math.abs(pointerAngle - segment.startAngle) < 0.1 || 
-                    (pointerAngle >= segment.startAngle && pointerAngle < segment.endAngle)) {
-                    console.log(`Попадание (fallback) в сектор: ${segment.name}`);
-                    return segment;
-                }
-            }
-            
-            console.warn('Сектор не найден, возвращаем 0%');
-            return SEGMENTS[0];
-        }
-        
-        // Сохранение скидки
-        async function saveDiscountResult(discount) {
-            const discountData = {
-                username: currentUsername,
-                userId: currentUserId,
-                discount: discount,
-                timestamp: Date.now(),
-                date: new Date().toLocaleString('ru-RU')
-            };
-            
-            let existingDiscounts = [];
-            const saved = localStorage.getItem('grad_discounts');
-            if (saved) {
-                existingDiscounts = JSON.parse(saved);
-            }
-            
-            const existingIndex = existingDiscounts.findIndex(d => d.username === currentUsername);
-            if (existingIndex === -1) {
-                existingDiscounts.push(discountData);
-                localStorage.setItem('grad_discounts', JSON.stringify(existingDiscounts));
-            }
-            
-            const displayName = tgUser?.username ? `@${tgUser.username}` : (tgUser?.first_name || currentUsername);
-            const message = `🎁 ПОЛУЧЕНА СКИДКА!\n\n👤 Пользователь: ${displayName}\n🆔 Username: ${currentUsername}\n🏷️ Скидка: ${discount}%\n📝 Промокод: GRAAD_${currentUsername}\n⏰ ${new Date().toLocaleString('ru-RU')}`;
-            
-            try {
-                await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        chat_id: ADMIN_CHAT_ID,
-                        text: message,
-                        parse_mode: 'HTML'
-                    })
-                });
-            } catch (error) {
-                console.error('Ошибка отправки в Telegram:', error);
-            }
-            
-            hasSpun = true;
-        }
-        
-        // Проверка существующей скидки
-        function checkExistingDiscount() {
-            const saved = localStorage.getItem('grad_discounts');
-            if (saved) {
-                const discounts = JSON.parse(saved);
-                const existing = discounts.find(d => d.username === currentUsername);
-                if (existing) {
-                    currentDiscount = existing.discount;
-                    hasSpun = true;
-                    showExistingDiscount(currentDiscount);
-                    return true;
-                }
-            }
-            return false;
-        }
-        
-        function showExistingDiscount(discount) {
-            document.getElementById('discountValue').textContent = `${discount}%`;
-            document.getElementById('promoCode').textContent = `GRAAD_${currentUsername}`;
-            document.getElementById('discountCard').style.display = 'flex';
-            document.getElementById('promoCodeBlock').style.display = 'flex';
-            
-            const spinBtn = document.getElementById('spinBtn');
-            spinBtn.disabled = true;
-            spinBtn.style.opacity = '0.5';
-            spinBtn.textContent = 'СКИДКА ПОЛУЧЕНА';
-            
-            document.getElementById('resultArea').style.display = 'block';
-            document.getElementById('resultTitle').textContent = '🎉 У вас уже есть скидка!';
-            document.getElementById('resultMessage').innerHTML = `Ваша скидка: ${discount}%<br>Промокод: <strong>GRAAD_${currentUsername}</strong>`;
-        }
-        
-        function showResult(discount) {
-            document.getElementById('discountValue').textContent = `${discount.value}%`;
-            document.getElementById('promoCode').textContent = `GRAAD_${currentUsername}`;
-            document.getElementById('discountCard').style.display = 'flex';
-            document.getElementById('promoCodeBlock').style.display = 'flex';
-            document.getElementById('resultArea').style.display = 'block';
-            
-            if (discount.value === 0) {
-                document.getElementById('resultTitle').textContent = '😢 Попробуй ещё раз!';
-                document.getElementById('resultMessage').innerHTML = 'Вам выпала скидка 0%... Но вы можете подписаться на наш канал, чтобы не пропустить акции!';
-            } else {
-                document.getElementById('resultTitle').textContent = '🎉 Поздравляем!';
-                document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Промокод: <strong>GRAAD_${currentUsername}</strong><br>Введите его при оформлении заказа.`;
-            }
-            
-            const spinBtn = document.getElementById('spinBtn');
-            spinBtn.disabled = true;
-            spinBtn.style.opacity = '0.5';
-            spinBtn.textContent = 'СКИДКА ПОЛУЧЕНА';
-        }
-        
-        // Вращение колеса
-        function spinWheel() {
-            if (isSpinning) return;
-            if (hasSpun) {
-                if (window.Telegram?.WebApp) {
-                    window.Telegram.WebApp.showPopup({
-                        title: 'Уже крутили!',
-                        message: `Вы уже получили скидку ${currentDiscount}%. Скидка действует только один раз.`,
-                        buttons: [{type: 'ok'}]
-                    });
-                }
-                return;
-            }
-            
-            isSpinning = true;
-            const spinBtn = document.getElementById('spinBtn');
-            spinBtn.disabled = true;
-            spinBtn.style.opacity = '0.6';
-            
-            // Случайное количество оборотов (5-10) + случайный конечный угол
-            const spins = 5 + Math.random() * 5;
-            const targetAngle = Math.random() * 360;
-            const startAngle = currentAngle;
-            const delta = 360 * spins + targetAngle;
-            
-            let startTime = null;
-            const duration = 2500;
-            
-            function animate(timestamp) {
-                if (!startTime) startTime = timestamp;
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(1, elapsed / duration);
-                // Плавное замедление
-                const easeOut = 1 - Math.pow(1 - progress, 3);
-                
-                currentAngle = startAngle + delta * easeOut;
-                drawWheel();
-                
-                if (progress < 1) {
-                    requestAnimationFrame(animate);
-                } else {
-                    currentAngle = startAngle + delta;
-                    drawWheel();
-                    
-                    const discount = getDiscountAtAngle();
-                    currentDiscount = discount.value;
-                    
-                    saveDiscountResult(currentDiscount);
-                    showResult(discount);
-                    
-                    isSpinning = false;
-                    spinBtn.disabled = false;
-                    spinBtn.style.opacity = '1';
-                }
-            }
-            
-            requestAnimationFrame(animate);
-        }
-        
-        document.getElementById('copyBtn')?.addEventListener('click', () => {
-            const promoCode = document.getElementById('promoCode').textContent;
-            navigator.clipboard.writeText(promoCode);
-            
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.showPopup({
-                    title: 'Скопировано!',
-                    message: `Промокод ${promoCode} скопирован`,
-                    buttons: [{type: 'ok'}]
-                });
-            }
-        });
-        
-        function initGame() {
-            canvas = document.getElementById('wheelCanvas');
-            ctx = canvas.getContext('2d');
-            
-            const size = Math.min(window.innerWidth - 60, 380);
-            canvas.width = size;
-            canvas.height = size;
-            canvas.style.width = `${size}px`;
-            canvas.style.height = `${size}px`;
-            
-            initSegments();
-            drawWheel();
-            
-            document.getElementById('spinBtn').addEventListener('click', spinWheel);
-            checkExistingDiscount();
-        }
-        
-        function updateCartCounter() {
-            const cart = localStorage.getItem('cart');
-            const items = cart ? JSON.parse(cart) : [];
-            const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
-            const counter = document.querySelector('.cart-count');
-            if (counter) {
-                if (totalCount > 0) {
-                    counter.textContent = totalCount;
-                    counter.style.display = 'flex';
-                } else {
-                    counter.style.display = 'none';
-                }
-            }
-        }
-        
-        window.addEventListener('resize', () => {
-            if (canvas) {
-                const size = Math.min(window.innerWidth - 60, 380);
-                canvas.width = size;
-                canvas.height = size;
-                canvas.style.width = `${size}px`;
-                canvas.style.height = `${size}px`;
-                drawWheel();
-            }
-        });
-        
-        initGame();
-        updateCartCounter();
-        console.log('✅ Колесо фортуны загружено');
-    </script>
-    
     <style>
+        /* Все стили сохранены */
         .game-container {
             padding-top: 80px;
             padding-bottom: 50px;
@@ -679,6 +179,212 @@ const SEGMENTS = [
             margin-top: 10px;
         }
         
+        .custom-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+        }
+        
+        .custom-modal-container {
+            position: relative;
+            width: 90%;
+            max-width: 340px;
+            background: #0a0a0a;
+            border-radius: 28px;
+            border: 1px solid rgba(138, 21, 56, 0.3);
+            overflow: hidden;
+            z-index: 2001;
+            animation: modalFadeIn 0.3s ease;
+        }
+        
+        .custom-modal-header {
+            padding: 20px 20px 10px;
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 1px;
+            color: #E6E6E6;
+            border-bottom: 1px solid rgba(230, 230, 230, 0.1);
+        }
+        
+        .custom-modal-body {
+            padding: 20px;
+        }
+        
+        .custom-modal-body p {
+            font-size: 14px;
+            color: rgba(230, 230, 230, 0.8);
+            line-height: 1.4;
+            margin-bottom: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        .custom-modal-hint {
+            font-size: 12px;
+            color: rgba(230, 230, 230, 0.5);
+        }
+        
+        .custom-modal-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(230, 230, 230, 0.2);
+            border-radius: 16px;
+            font-size: 16px;
+            color: #E6E6E6;
+            font-family: monospace;
+            margin-top: 16px;
+        }
+        
+        .custom-modal-input:focus {
+            outline: none;
+            border-color: #8A1538;
+        }
+        
+        .custom-modal-error {
+            font-size: 12px;
+            color: #ff3b30;
+            margin-top: 8px;
+            text-align: center;
+        }
+        
+        .custom-modal-footer {
+            padding: 0 20px 20px;
+        }
+        
+        .custom-modal-btn {
+            width: 100%;
+            padding: 14px;
+            background: #8A1538;
+            border: none;
+            border-radius: 60px;
+            color: #E6E6E6;
+            font-size: 16px;
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-modal-btn:active {
+            transform: scale(0.97);
+            background: #6d0f2c;
+        }
+        
+        .custom-popup {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .custom-popup-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+        }
+        
+        .custom-popup-container {
+            position: relative;
+            width: 90%;
+            max-width: 340px;
+            background: #0a0a0a;
+            border-radius: 28px;
+            border: 1px solid rgba(138, 21, 56, 0.3);
+            overflow: hidden;
+            z-index: 2001;
+            animation: modalFadeIn 0.3s ease;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .custom-popup-header {
+            padding: 20px 20px 10px;
+            text-align: center;
+            font-size: 18px;
+            letter-spacing: 1px;
+            color: #E6E6E6;
+            border-bottom: 1px solid rgba(230, 230, 230, 0.1);
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+        }
+        
+        .custom-popup-body {
+            padding: 20px;
+            font-size: 14px;
+            color: rgba(230, 230, 230, 0.9);
+            line-height: 1.5;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        
+        .custom-popup-body b {
+            color: #8A1538;
+        }
+        
+        .custom-popup-body code {
+            background: rgba(138, 21, 56, 0.2);
+            padding: 2px 6px;
+            border-radius: 6px;
+            font-family: monospace;
+        }
+        
+        .custom-popup-footer {
+            padding: 0 20px 20px;
+        }
+        
+        .custom-popup-btn {
+            width: 100%;
+            padding: 14px;
+            background: #8A1538;
+            border: none;
+            border-radius: 60px;
+            color: #E6E6E6;
+            font-size: 16px;
+            font-family: 'Bebas Neue Cyrillic', 'Bebas Neue', sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .custom-popup-btn:active {
+            transform: scale(0.97);
+            background: #6d0f2c;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
         @media (max-width: 480px) {
             .game-header h1 { font-size: 32px; }
             .user-card, .discount-card { width: 100%; justify-content: center; }
@@ -691,5 +397,652 @@ const SEGMENTS = [
             .spin-btn { bottom: 8%; padding: 8px 16px; font-size: 12px; }
         }
     </style>
+</head>
+<body>
+    <!-- Бургер-меню -->
+    <div class="burger-menu" id="burgerMenu">
+        <div class="burger-overlay" id="burgerOverlay"></div>
+        <div class="burger-panel">
+            <div class="burger-header">
+                <img src="logo.svg" alt="GRAAD" class="burger-logo">
+                <button class="burger-close" id="burgerClose">✕</button>
+            </div>
+            <nav class="burger-nav">
+                <a href="index.html" class="burger-link">Главная</a>
+                <a href="catalog.html" class="burger-link">Каталог</a>
+                <a href="about.html" class="burger-link">О нас</a>
+                <a href="new.html" class="burger-link">Новинки</a>
+                <a href="sales.html" class="burger-link">Скидки</a>
+                <a href="support.html" class="burger-link">Поддержка</a>
+                <a href="game.html" class="burger-link">Получить скидку!</a>
+            </nav>
+        </div>
+    </div>
+
+    <header class="glass-header">
+        <div class="header-left">
+            <img src="logo.svg" alt="GRAAD" class="logo-icon" id="logoBtn">
+        </div>
+        <div class="header-right">
+            <button class="icon-btn" id="cartBtn">
+                <img src="cart.svg" alt="Корзина">
+                <span class="cart-count" style="display: none;">0</span>
+            </button>
+            <button class="burger-btn" id="burgerBtn">
+                <img src="menu.svg" alt="Меню">
+            </button>
+        </div>
+    </header>
+
+    <!-- Модальное окно для ввода username -->
+    <div class="custom-modal" id="usernameModal" style="display: none;">
+        <div class="custom-modal-overlay"></div>
+        <div class="custom-modal-container">
+            <div class="custom-modal-header">
+                <span>🔐 ТРЕБУЕТСЯ ИДЕНТИФИКАЦИЯ</span>
+            </div>
+            <div class="custom-modal-body">
+                <p>Для получения скидки необходимо указать ваш Telegram username или номер телефона.</p>
+                <p class="custom-modal-hint">Это нужно, чтобы мы могли отправить вам промокод и уведомить о скидке.</p>
+                <input type="text" id="guestUsernameInput" class="custom-modal-input" placeholder="Ваш Telegram username или телефон">
+                <div class="custom-modal-error" id="modalError"></div>
+            </div>
+            <div class="custom-modal-footer">
+                <button class="custom-modal-btn" id="saveUsernameBtn">ПРОДОЛЖИТЬ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Кастомный попап -->
+    <div class="custom-popup" id="customPopup" style="display: none;">
+        <div class="custom-popup-overlay"></div>
+        <div class="custom-popup-container">
+            <div class="custom-popup-header" id="popupTitle">🎉 Поздравляем!</div>
+            <div class="custom-popup-body" id="popupMessage"></div>
+            <div class="custom-popup-footer">
+                <button class="custom-popup-btn" id="popupCloseBtn">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="game-header">
+            <h1>КОЛЕСО ФОРТУНЫ</h1>
+            <p class="game-subtitle">Крути колесо и получи скидку на первый заказ!</p>
+        </div>
+
+        <div class="user-info">
+            <div class="user-card">
+                <span class="user-label">Ваш ID:</span>
+                <span class="user-value" id="usernameDisplay">Загрузка...</span>
+            </div>
+            <div class="discount-card" id="discountCard" style="display: none;">
+                <span class="discount-label">Ваша скидка:</span>
+                <span class="discount-value" id="discountValue">-</span>
+                <div class="promo-code-block" id="promoCodeBlock" style="display: none;">
+                    <span class="promo-label">Промокод:</span>
+                    <span class="promo-code" id="promoCode">-</span>
+                    <button class="copy-btn" id="copyBtn">Копировать</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="wheel-wrapper">
+            <canvas id="wheelCanvas" width="500" height="500"></canvas>
+            <button class="spin-btn" id="spinBtn">КРУТИТЬ!</button>
+        </div>
+
+        <div class="result-area" id="resultArea" style="display: none;">
+            <div class="result-card">
+                <h3 id="resultTitle"></h3>
+                <p id="resultMessage"></p>
+            </div>
+        </div>
+
+        <div class="rules-area">
+            <h3>Как получить скидку?</h3>
+            <p>1. Крути колесо один раз — выпадет скидка от 0% до 20%</p>
+            <p>2. Скидка автоматически привязывается к вашему ID</p>
+            <p>3. При оформлении заказа введите промокод: <strong>GRAAD_ВАШ_ID</strong></p>
+            <p>4. Скидка действует только на первый заказ</p>
+            <p class="warning">⚠️ Скидку можно получить только один раз!</p>
+        </div>
+    </div>
+
+    <script>
+        // ==================== НАСТРОЙКИ БОТА ====================
+        // ⚠️ ВАЖНО: Замените на свои данные!
+        const BOT_TOKEN = '8407999877:AAFdVeqb39FWPA6Pt6GxatvuDlKxuBGUyJg';     // Токен вашего бота от @BotFather
+        const ADMIN_CHAT_ID = '1817626274'; // Ваш Telegram ID
+        // ======================================================
+
+        function showCustomPopup(title, message, onClose) {
+            const popup = document.getElementById('customPopup');
+            const popupTitle = document.getElementById('popupTitle');
+            const popupMessage = document.getElementById('popupMessage');
+            const closeBtn = document.getElementById('popupCloseBtn');
+            
+            popupTitle.textContent = title;
+            popupMessage.innerHTML = message;
+            popup.style.display = 'flex';
+            
+            const handleClose = () => {
+                popup.style.display = 'none';
+                popupMessage.innerHTML = '';
+                closeBtn.removeEventListener('click', handleClose);
+                if (onClose) onClose();
+            };
+            
+            closeBtn.addEventListener('click', handleClose);
+            popup.addEventListener('click', (e) => {
+                if (e.target === popup) handleClose();
+            });
+        }
+        
+        let tgUser = null;
+        let currentUsername = '';
+        let currentUserId = '';
+        let currentDiscount = null;
+        let hasSpun = false;
+        let isSpinning = false;
+        let pendingDiscountValue = null; // Временное хранение скидки до ввода username
+        
+        const SEGMENTS = [
+            { name: '0%', value: 0, color: '#555555', probability: 30 },
+            { name: '5%', value: 5, color: '#8A1538', probability: 30 },
+            { name: '10%', value: 10, color: '#6B0F2C', probability: 17 },
+            { name: '15%', value: 15, color: '#8A1538', probability: 13 },
+            { name: '20%', value: 20, color: '#4A0A1C', probability: 10 }
+        ];
+        
+        let segmentsWithAngles = [];
+        let currentAngle = 0;
+        let canvas = null;
+        let ctx = null;
+        
+        // Инициализация пользователя
+        if (window.Telegram && window.Telegram.WebApp) {
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            tg.enableClosingConfirmation();
+            
+            if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+                tgUser = tg.initDataUnsafe.user;
+                currentUserId = tgUser.id.toString();
+                
+                if (tgUser.username) {
+                    currentUsername = tgUser.username;
+                    document.getElementById('usernameDisplay').textContent = `@${currentUsername}`;
+                } else if (tgUser.first_name) {
+                    currentUsername = `${tgUser.first_name} ${tgUser.last_name || ''}`.trim().toLowerCase().replace(/\s/g, '_');
+                    document.getElementById('usernameDisplay').textContent = currentUsername;
+                } else {
+                    currentUsername = `user_${currentUserId}`;
+                    document.getElementById('usernameDisplay').textContent = currentUsername;
+                }
+                console.log('✅ Пользователь авторизован в Telegram:', currentUsername);
+            } else {
+                // Гость в Telegram MiniApp (не авторизован)
+                let guestUsername = localStorage.getItem('guest_username');
+                if (!guestUsername) {
+                    guestUsername = null; // Не создаем автоматически, ждем ввода
+                }
+                currentUsername = guestUsername || 'Гость (требуется ввод)';
+                currentUserId = guestUsername || 'pending';
+                document.getElementById('usernameDisplay').textContent = currentUsername === 'Гость (требуется ввод)' ? 'Не указан' : currentUsername;
+                console.log('👤 Гость в MiniApp, требуется ввод username');
+            }
+        } else {
+            // Браузерный пользователь
+            let browserUsername = localStorage.getItem('browser_username');
+            if (!browserUsername) {
+                browserUsername = null;
+            }
+            currentUsername = browserUsername || 'Гость (требуется ввод)';
+            currentUserId = browserUsername || 'pending';
+            document.getElementById('usernameDisplay').textContent = currentUsername === 'Гость (требуется ввод)' ? 'Не указан' : currentUsername;
+            console.log('🌐 Браузерный гость, требуется ввод username');
+        }
+        
+        // Бургер-меню
+        const burgerBtn = document.getElementById('burgerBtn');
+        const burgerMenu = document.getElementById('burgerMenu');
+        const burgerOverlay = document.getElementById('burgerOverlay');
+        const burgerClose = document.getElementById('burgerClose');
+        
+        function openBurger() {
+            burgerMenu.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+        
+        function closeBurger() {
+            burgerMenu.classList.remove('open');
+            document.body.style.overflow = '';
+        }
+        
+        if (burgerBtn) burgerBtn.addEventListener('click', openBurger);
+        if (burgerOverlay) burgerOverlay.addEventListener('click', closeBurger);
+        if (burgerClose) burgerClose.addEventListener('click', closeBurger);
+        
+        document.getElementById('cartBtn')?.addEventListener('click', () => {
+            window.location.href = 'cart.html';
+        });
+        
+        document.getElementById('logoBtn')?.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+        
+        function hasTelegramId() {
+            return tgUser !== null && tgUser.id;
+        }
+        
+        function showUsernameModal() {
+            const modal = document.getElementById('usernameModal');
+            if (modal) {
+                modal.style.display = 'flex';
+                document.getElementById('guestUsernameInput').value = '';
+                document.getElementById('modalError').textContent = '';
+            }
+        }
+        
+        function hideUsernameModal() {
+            const modal = document.getElementById('usernameModal');
+            if (modal) modal.style.display = 'none';
+        }
+        
+        // Отправка уведомления админу
+        async function sendAdminNotification(discount, userContact, promoCode) {
+            let userDisplay = userContact;
+            let additionalInfo = '';
+            
+            if (tgUser && tgUser.id) {
+                if (tgUser.username) userDisplay = `@${tgUser.username}`;
+                else if (tgUser.first_name) userDisplay = `${tgUser.first_name} ${tgUser.last_name || ''}`;
+                additionalInfo = `\n🆔 Telegram ID: ${tgUser.id}\n📱 First Name: ${tgUser.first_name || '—'}`;
+            }
+            
+            const message = `🎁 ПОЛУЧЕНА СКИДКА В GRAAD!\n\n` +
+                `👤 Пользователь: ${userDisplay}\n` +
+                `📞 Указанный контакт: ${userContact}\n` +
+                `${additionalInfo}\n` +
+                `🏷️ Скидка: ${discount}%\n` +
+                `📝 Промокод: ${promoCode}\n` +
+                `🌐 Платформа: ${hasTelegramId() ? 'Telegram (авторизован)' : (tgUser ? 'Telegram (гость)' : 'Web Browser')}\n` +
+                `⏰ Время: ${new Date().toLocaleString('ru-RU')}`;
+            
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: ADMIN_CHAT_ID, text: message, parse_mode: 'HTML' })
+                });
+                const result = await response.json();
+                if (result.ok) {
+                    console.log('✅ Уведомление админу отправлено');
+                    return true;
+                } else {
+                    console.error('Ошибка API:', result.description);
+                    return false;
+                }
+            } catch (error) {
+                console.error('Ошибка отправки уведомления:', error);
+                return false;
+            }
+        }
+        
+        // Отправка промокода пользователю в Telegram
+        async function sendPromoCodeToUser(discount, promoCode) {
+            if (!hasTelegramId()) return false;
+            
+            const message = `🎁 <b>Ваш промокод на скидку в GRAAD!</b>\n\n` +
+                `🏷️ <b>Промокод:</b> <code>${promoCode}</code>\n` +
+                `💸 <b>Скидка:</b> ${discount}%\n\n` +
+                `📝 <b>Как использовать:</b>\n` +
+                `1. Добавьте товары в корзину\n` +
+                `2. При оформлении заказа введите промокод\n` +
+                `3. Скидка применится автоматически\n\n` +
+                `⚠️ Промокод действует только один раз.`;
+            
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ chat_id: tgUser.id, text: message, parse_mode: 'HTML' })
+                });
+                const result = await response.json();
+                return result.ok;
+            } catch (error) {
+                console.error('Ошибка отправки промокода:', error);
+                return false;
+            }
+        }
+        
+        function showPromoCodeInPopup(discount, promoCode) {
+            const message = `🎁 <b>Ваш промокод на скидку!</b><br><br>` +
+                `🏷️ <b>Промокод:</b> <code>${promoCode}</code><br>` +
+                `💸 <b>Скидка:</b> ${discount}%<br><br>` +
+                `📝 <b>Как использовать:</b><br>` +
+                `1. Добавьте товары в корзину<br>` +
+                `2. При оформлении заказа введите промокод<br>` +
+                `3. Скидка применится автоматически<br><br>` +
+                `⚠️ Промокод действует только один раз.`;
+            showCustomPopup('🎁 Ваш промокод!', message, null);
+        }
+        
+        // Сохранение скидки и отправка уведомлений
+        async function saveDiscountResult(discount, finalUsername) {
+            const promoCode = `GRAAD_${finalUsername}`;
+            
+            const discountData = {
+                username: finalUsername,
+                userId: finalUsername,
+                discount: discount,
+                timestamp: Date.now(),
+                date: new Date().toLocaleString('ru-RU'),
+                platform: hasTelegramId() ? 'telegram' : (tgUser ? 'telegram_guest' : 'browser')
+            };
+            
+            let existingDiscounts = JSON.parse(localStorage.getItem('grad_discounts') || '[]');
+            if (!existingDiscounts.find(d => d.username === finalUsername)) {
+                existingDiscounts.push(discountData);
+                localStorage.setItem('grad_discounts', JSON.stringify(existingDiscounts));
+            }
+            
+            // Отправляем уведомление админу
+            await sendAdminNotification(discount, finalUsername, promoCode);
+            
+            // Отправляем промокод пользователю (если есть Telegram ID)
+            const sentToUser = await sendPromoCodeToUser(discount, promoCode);
+            if (!hasTelegramId() || !sentToUser) {
+                showPromoCodeInPopup(discount, promoCode);
+            }
+            
+            hasSpun = true;
+            currentDiscount = discount;
+        }
+        
+        function checkExistingDiscount() {
+            if (!currentUsername || currentUsername === 'Гость (требуется ввод)') return false;
+            const saved = localStorage.getItem('grad_discounts');
+            if (saved) {
+                const discounts = JSON.parse(saved);
+                const existing = discounts.find(d => d.username === currentUsername);
+                if (existing) {
+                    currentDiscount = existing.discount;
+                    hasSpun = true;
+                    document.getElementById('discountValue').textContent = `${currentDiscount}%`;
+                    document.getElementById('promoCode').textContent = `GRAAD_${currentUsername}`;
+                    document.getElementById('discountCard').style.display = 'flex';
+                    document.getElementById('promoCodeBlock').style.display = 'flex';
+                    document.getElementById('spinBtn').disabled = true;
+                    document.getElementById('spinBtn').style.opacity = '0.5';
+                    document.getElementById('spinBtn').textContent = 'СКИДКА ПОЛУЧЕНА';
+                    document.getElementById('resultArea').style.display = 'block';
+                    document.getElementById('resultTitle').textContent = '🎉 У вас уже есть скидка!';
+                    document.getElementById('resultMessage').innerHTML = `Ваша скидка: ${currentDiscount}%<br>Промокод: <strong>GRAAD_${currentUsername}</strong>`;
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        function showResult(discount) {
+            document.getElementById('discountValue').textContent = `${discount.value}%`;
+            document.getElementById('promoCode').textContent = `GRAAD_${currentUsername === 'Гость (требуется ввод)' ? '...' : currentUsername}`;
+            document.getElementById('discountCard').style.display = 'flex';
+            document.getElementById('promoCodeBlock').style.display = 'flex';
+            document.getElementById('resultArea').style.display = 'block';
+            
+            if (discount.value === 0) {
+                document.getElementById('resultTitle').textContent = '😢 Попробуй ещё раз!';
+                document.getElementById('resultMessage').innerHTML = 'Вам выпала скидка 0%... Но вы можете подписаться на наш канал, чтобы не пропустить акции!';
+            } else {
+                document.getElementById('resultTitle').textContent = '🎉 Поздравляем!';
+                if (hasTelegramId()) {
+                    document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Промокод отправлен вам в Telegram.`;
+                } else {
+                    document.getElementById('resultMessage').innerHTML = `Вам выпала скидка ${discount.value}%!<br>Пожалуйста, укажите ваш контакт для получения промокода.`;
+                }
+            }
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('spinBtn').style.opacity = '0.5';
+            document.getElementById('spinBtn').textContent = 'СКИДКА ПОЛУЧЕНА';
+        }
+        
+        function initSegments() {
+            let startAngle = 0;
+            segmentsWithAngles = [];
+            for (const segment of SEGMENTS) {
+                const angle = (segment.probability / 100) * 360;
+                segmentsWithAngles.push({ ...segment, startAngle, endAngle: startAngle + angle, angle, midAngle: startAngle + angle / 2 });
+                startAngle += angle;
+            }
+        }
+        
+        function drawWheel() {
+            if (!canvas || !ctx) return;
+            const size = canvas.width;
+            const centerX = size / 2, centerY = size / 2, radius = size * 0.42;
+            ctx.clearRect(0, 0, size, size);
+            for (const segment of segmentsWithAngles) {
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                const startRad = (segment.startAngle + currentAngle) * Math.PI / 180;
+                const endRad = (segment.endAngle + currentAngle) * Math.PI / 180;
+                ctx.arc(centerX, centerY, radius, startRad, endRad);
+                ctx.closePath();
+                ctx.fillStyle = segment.color;
+                ctx.fill();
+                ctx.strokeStyle = '#E6E6E6';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate((segment.startAngle + segment.endAngle + currentAngle * 2) / 2 * Math.PI / 180);
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#E6E6E6';
+                ctx.font = `bold ${Math.max(14, Math.floor(size / 25))}px "Bebas Neue Cyrillic", "Bebas Neue", sans-serif`;
+                ctx.fillText(segment.name, radius * 0.65, 0);
+                ctx.restore();
+            }
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 35, 0, 2 * Math.PI);
+            ctx.fillStyle = '#8A1538';
+            ctx.fill();
+            ctx.strokeStyle = '#E6E6E6';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(centerX - 12, 18);
+            ctx.lineTo(centerX, 4);
+            ctx.lineTo(centerX + 12, 18);
+            ctx.fillStyle = '#E6E6E6';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(centerX, 8, 4, 0, 2 * Math.PI);
+            ctx.fillStyle = '#8A1538';
+            ctx.fill();
+        }
+        
+        function getDiscountAtAngle() {
+            const rotation = currentAngle % 360;
+            const pointerAngle = (270 - rotation + 360) % 360;
+            for (const segment of segmentsWithAngles) {
+                if (pointerAngle >= segment.startAngle && pointerAngle < segment.endAngle) return segment;
+            }
+            return SEGMENTS[0];
+        }
+        
+        function performSpin() {
+            if (isSpinning || hasSpun) return;
+            isSpinning = true;
+            const spinBtn = document.getElementById('spinBtn');
+            spinBtn.disabled = true;
+            spinBtn.style.opacity = '0.6';
+            
+            const spins = 5 + Math.random() * 5;
+            const targetAngle = Math.random() * 360;
+            const startAngle = currentAngle;
+            const delta = 360 * spins + targetAngle;
+            let startTime = null;
+            const duration = 2500;
+            
+            function animate(timestamp) {
+                if (!startTime) startTime = timestamp;
+                const elapsed = timestamp - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                currentAngle = startAngle + delta * easeOut;
+                drawWheel();
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    currentAngle = startAngle + delta;
+                    drawWheel();
+                    const discount = getDiscountAtAngle();
+                    pendingDiscountValue = discount.value;
+                    
+                    // ПРОВЕРКА: нужно ли ввести username?
+                    const needsUsername = (!currentUsername || currentUsername === 'Гость (требуется ввод)') && !hasTelegramId();
+                    
+                    if (needsUsername) {
+                        // Сохраняем скидку временно и показываем модалку
+                        localStorage.setItem('pending_discount_value', pendingDiscountValue);
+                        showUsernameModal();
+                        showResult(discount);
+                    } else {
+                        // У пользователя уже есть username или он авторизован в Telegram
+                        saveDiscountResult(pendingDiscountValue, currentUsername);
+                        showResult(discount);
+                    }
+                    
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    spinBtn.style.opacity = '1';
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        
+        function spinWheel() {
+            if (isSpinning) return;
+            if (hasSpun) {
+                showCustomPopup('Уже крутили!', `Вы уже получили скидку ${currentDiscount}%. Скидка действует только один раз.`, null);
+                return;
+            }
+            performSpin();
+        }
+        
+        // Обработка сохранения контакта из модалки
+        document.getElementById('saveUsernameBtn')?.addEventListener('click', async () => {
+            const input = document.getElementById('guestUsernameInput');
+            const contact = input.value.trim();
+            const errorDiv = document.getElementById('modalError');
+            
+            if (!contact) {
+                errorDiv.textContent = 'Пожалуйста, укажите ваш Telegram username или номер телефона';
+                return;
+            }
+            if (contact.length < 3) {
+                errorDiv.textContent = 'Слишком короткий контакт. Введите корректные данные.';
+                return;
+            }
+            
+            // Сохраняем контакт
+            currentUsername = contact;
+            currentUserId = contact;
+            localStorage.setItem('guest_username', contact);
+            localStorage.setItem('browser_username', contact);
+            document.getElementById('usernameDisplay').textContent = contact;
+            hideUsernameModal();
+            
+            // Проверяем отложенную скидку
+            const pendingDisc = localStorage.getItem('pending_discount_value');
+            if (pendingDisc && !hasSpun) {
+                const discValue = parseInt(pendingDisc);
+                await saveDiscountResult(discValue, contact);
+                document.getElementById('discountValue').textContent = `${discValue}%`;
+                document.getElementById('promoCode').textContent = `GRAAD_${contact}`;
+                localStorage.removeItem('pending_discount_value');
+            }
+        });
+        
+        document.getElementById('copyBtn')?.addEventListener('click', () => {
+            const promoCode = document.getElementById('promoCode').textContent;
+            navigator.clipboard.writeText(promoCode);
+            showCustomPopup('Скопировано!', `Промокод ${promoCode} скопирован`, null);
+        });
+        
+        document.getElementById('usernameModal')?.addEventListener('click', (e) => {
+            if (e.target.classList.contains('custom-modal-overlay')) hideUsernameModal();
+        });
+        
+        function initGame() {
+            canvas = document.getElementById('wheelCanvas');
+            ctx = canvas.getContext('2d');
+            const size = Math.min(window.innerWidth - 60, 380);
+            canvas.width = size;
+            canvas.height = size;
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            initSegments();
+            drawWheel();
+            document.getElementById('spinBtn').addEventListener('click', spinWheel);
+            checkExistingDiscount();
+        }
+        
+        function updateCartCounter() {
+            const cart = localStorage.getItem('cart');
+            const items = cart ? JSON.parse(cart) : [];
+            const totalCount = items.reduce((sum, item) => sum + item.quantity, 0);
+            const counter = document.querySelector('.cart-count');
+            if (counter) {
+                if (totalCount > 0) {
+                    counter.textContent = totalCount;
+                    counter.style.display = 'flex';
+                } else {
+                    counter.style.display = 'none';
+                }
+            }
+        }
+        
+        // Сброс скидок для админа
+        window.resetDiscounts = function(password) {
+            if (password === '13467900') {
+                localStorage.removeItem('grad_discounts');
+                localStorage.removeItem('guest_username');
+                localStorage.removeItem('browser_username');
+                localStorage.removeItem('pending_discount_value');
+                hasSpun = false;
+                currentDiscount = null;
+                document.getElementById('discountCard').style.display = 'none';
+                document.getElementById('resultArea').style.display = 'none';
+                const spinBtn = document.getElementById('spinBtn');
+                spinBtn.disabled = false;
+                spinBtn.style.opacity = '1';
+                spinBtn.textContent = 'КРУТИТЬ!';
+                return 'Сброс выполнен';
+            }
+            return 'Неверный пароль';
+        };
+        
+        window.addEventListener('resize', () => {
+            if (canvas) {
+                const size = Math.min(window.innerWidth - 60, 380);
+                canvas.width = size;
+                canvas.height = size;
+                canvas.style.width = `${size}px`;
+                canvas.style.height = `${size}px`;
+                drawWheel();
+            }
+        });
+        
+        initGame();
+        updateCartCounter();
+        console.log('✅ Колесо фортуны загружено');
+        console.log('⚠️ Вставьте BOT_TOKEN и ADMIN_CHAT_ID в коде для работы уведомлений!');
+    </script>
 </body>
 </html>
