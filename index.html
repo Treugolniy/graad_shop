@@ -7,6 +7,32 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
+<style>
+    /* Запрет прокрутки всей страницы */
+    html, body {
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+    }
+    
+    /* Контент может прокручиваться внутри */
+    .main-content {
+        overflow-y: auto;
+        height: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Скрываем скроллбар (опционально) */
+    .main-content::-webkit-scrollbar {
+        width: 0;
+        background: transparent;
+    }
+</style>
 <body>
     <!-- Бургер-меню (боковая панель) -->
     <div class="burger-menu" id="burgerMenu">
@@ -125,47 +151,6 @@
         if (!hasSeenAnimation) {
             sessionStorage.setItem('grad_splash_shown', 'true');
         } else {
-            const splashScreen = document.getElementById('splashScreen');
-            const mainContent = document.getElementById('mainContent');
-            
-            if (splashScreen && mainContent) {
-                splashScreen.style.display = 'none';
-                mainContent.classList.remove('hidden');
-                document.body.classList.add('has-slider');
-                
-                if (typeof startBackgroundSlider === 'function') {
-                    startBackgroundSlider();
-                }
-                
-                setTimeout(() => {
-                    const heroTitle = document.getElementById('heroTitle');
-                    const heroButtons = document.getElementById('heroButtons');
-                    const socialIcons = document.getElementById('socialIcons');
-                    
-                    if (heroTitle) heroTitle.classList.add('visible');
-                    if (heroButtons) heroButtons.classList.add('visible');
-                    if (socialIcons) socialIcons.classList.add('visible');
-                }, 100);
-            }
-        }
-    </script>
-</body>
-</html>            <a href="#" class="social-link"><img src="instagram.svg" alt="Instagram"></a>
-        </div>
-    </main>
-
-    <script src="data.js"></script>
-    <script src="script.js"></script>
-    <script>
-        // sessionStorage — анимация показывается при каждом новом запуске приложения
-        const hasSeenAnimation = sessionStorage.getItem('grad_splash_shown');
-        
-        if (!hasSeenAnimation) {
-            // Первый запуск (после открытия приложения) — показываем анимацию
-            sessionStorage.setItem('grad_splash_shown', 'true');
-            // Анимация запускается автоматически из script.js
-        } else {
-            // Повторный переход на главную (через логотип) — сразу показываем контент
             const splashScreen = document.getElementById('splashScreen');
             const mainContent = document.getElementById('mainContent');
             
